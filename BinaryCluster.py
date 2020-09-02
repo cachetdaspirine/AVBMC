@@ -45,26 +45,31 @@ class BinaryCluster:
             for i in range(self.WindowArray.shape[0]):
                 print(str(self.WindowArray[i,j])+" ",end='')
             print('\n',end='')
+    def WindowToReal(self,ij):
+        return (ij[0]+self.Xg-self.MidX,ij[1]+self.Yg-self.MidY)
+    def RealToWindow(self,ij):
+        return (ij[0]-self.Xg+self.MidX,ij[1]-self.Yg+self.MidY)
     def BuildArray(self):
         self.ComputeCenter()
         #Build a square window of size NP*NP to be sure that the aggregate
         # fit in it. It is full of 0 for now
         self.WindowArray=np.array([np.zeros(self.Size,dtype=int)
                             for _ in range(self.Size)])
-        MidX,MidY=self.Size//2, self.Size//2#middle of my aggregate
+        self.MidX,self.MidY=self.Size//2, self.Size//2#middle of my aggregate
         # make sure that the aggregate is in the central sites
         # has the same orientation in the real/window space
         if(self.Xg+self.Yg)%2==1:
-            MidY+=1
-        self.WindowSpaceSites=set()
+            self.MidY+=1
+        OccupiedList=list()
         for ij in self.RealSpaceSites:
-            self.WindowSpaceSites.add((ij[0]-self.Xg+MidX,ij[1]-self.Yg+MidY))
-        for ij in self.WindowSpaceSites:
+            #self.OccupiedSite.add((ij[0]-self.Xg+self.MidX,ij[1]-self.Yg+self.MidY))
+            OccupiedList.append(self.RealToWindow(ij))
+        self.OccupiedSite=np.array(OccupiedList,dtype=int)
+        for ij in self.OccupiedSite:
             try:
                 self.WindowArray[ij[0],ij[1]]=1
             except IndexError:
                 raise
-
     # Given a list of indices in the real space domaine of occupied SitesIndices
     # this function compute the center of mass of the object in order to rebuild
     # the aggregate in a smaller window
@@ -76,12 +81,16 @@ class BinaryCluster:
         self.Xg=int(self.Xg/len(self.RealSpaceSites)+1)
         self.Yg=int(self.Yg/len(self.RealSpaceSites)+1)
     def ComputeBoundarySites(self):
-        BoundarySites=set()
-        self.BuildOccupiedSites()
+        BoundarySet=set()
+        #self.BuildOccupiedSites()
         for ij in self.OccupiedSite:
             for neigh in self.Get_Neighbors(ij,Free=True):
-                BoundarySites.add(neigh)
-        self.NBoundary=BoundarySites.__len__()
+                BoundarySet.add(neigh)
+        self.BoundarySites=np.array(list(BoundarySet))
+        self.RealBoundarySites=copy.copy(self.BoundarySites)
+        self.RealBoundarySites[:,0]+=self.Xg-self.MidX
+        self.RealBoundarySites[:,1]+=self.Yg-self.MidY
+        self.NBoundary=self.BoundarySites.__len__()
     def Get_Neighbors(self, ij,Occupied=False,Free=False):
         Res=list()
         if ij[0]+1<self.Size:
@@ -114,8 +123,9 @@ class BinaryCluster:
         Res=set(Res)
         return Res
     def BuildOccupiedSites(self):
-        self.OccupiedSite=set()
+        OccupiedList=list()
         for i,line in enumerate(self.WindowArray):
             for j,site in enumerate(line):
                 if site==1:
-                    self.OccupiedSite.add((i,j))
+                    OccupiedList.append((i,j))
+        self.OccupiedSite=np.array(OccupiedList,dtype=int)
