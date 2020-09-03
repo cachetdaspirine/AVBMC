@@ -259,13 +259,15 @@ class System:
                                     Xg=self.BinaryClusters[-1].Xg,
                                     Yg=self.BinaryClusters[-1].Yg))
         return RandomSite
-    def RemoveRandParticle(self):
+    def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
         try :
             RandomParticle=rd.sample(self.OccupiedSite,1)[0]
         except ValueError:
             print("No particle in the system to remove")
             return
+        if NIJ:
+            Vcinity = self.CheckVicinity(RandomParticle,NIJ)
         # Delete the only affected cluster, make a loop because GetAffectedClust
         # ers returns a set
         for AffectedCluster in reversed(sorted(self.GetAffectedCluster({RandomParticle}))):
@@ -293,7 +295,29 @@ class System:
                                         Kvol=self.Kvol,
                                         Xg=self.BinaryClusters[-k].Xg,
                                         Yg=self.BinaryClusters[-k].Yg))
+        if NIJ:
+            return RandomParticle, Vicinity
         return RandomParticle
+    def SelectRandomNeighbor(self):
+        try :
+            RandomParticle=rd.sample(self.OccupiedSite,1)[0]
+        except ValueError:
+            print("No particle in the system to remove")
+            return
+        return RandomParticle
+    def CheckVicinity(self,IJ,NIJ):
+        ClustNIJ = self.FindCluster(NIJ)
+        if IJ in ClustNIJ.RealBoundarySites:
+            
+    def FindCLuster(self,IJ):
+        Cluster=None
+        for Clust in BinaryClusters:
+            if IJ in Clust.RealSpaceSites:
+                Cluster=Clust
+                break
+        if Cluster==None:
+            raise ValueError
+        return Cluster
     def GetAffectedCluster(self,SiteConcerned):
         # Must return a set (to avoid doublet) of cluster indices
         AffectedCluster=set()

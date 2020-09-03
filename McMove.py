@@ -4,7 +4,7 @@ from System import *
 import os
 
 class MonteCarlo:
-    def __init__(self,Np=1,SimNum=0):
+    def __init__(self,Np=1,SimNum=0,Pbias=0):
         self.Success=0
         self.Refuse=0
         self.DEP,self.DEN=0,0
@@ -27,6 +27,16 @@ class MonteCarlo:
             IJ0=list(BinSyst.RemoveRandParticle())
             IJ1=list(BinSyst.AddRandParticle(IJ0,self.radius))
             self.Moved.append(IJ0+IJ1)
+    def McMoveInOut(self,BinSyst):
+        self.Moved.clear()
+        self.CopySystem=System(Old_System=BinSyst)
+        for _ in range(self.Nmove):
+            In=False
+            if if rd.uniform(0,1)<Pbias:
+                In=True
+            NIJ = BinSyst.SelectRandomNeighbor()
+            IJ0 = BinSyst.RemoveRandParticle()
+            BinSyst.CheckVicinity()
     def Reverse(self):
         return System(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):

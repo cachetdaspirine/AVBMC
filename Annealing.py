@@ -46,6 +46,7 @@ with open('Res/Sim'+str(SimNum)+'/Parameter.out','w') as myfile:
     myfile.write('BetaInitial '+str(BetaInitial)+'\n')
     myfile.write('BetaFinal '+str(BetaFinal)+'\n')
     myfile.write('DE0G '+str(DEG)+'\n')
+    myfile.write('Pbias '+str(Pbias)+'\n')
     myfile.write('Kmain '+str(Kmain)+'\n')
     myfile.write('Kcoupling '+str(Kcoupling)+'\n')
     myfile.write('Eps '+str(Eps)+'\n')
@@ -65,7 +66,7 @@ rd.seed(Seed)
 np.random.seed(Seed)
 Beta=BetaInitial
 Syst=System(SizeX,SizeY,J=J,Eps=Eps,Kcoupling=Kcoupling,Kmain=Kmain,Kvol=KVOL)
-MC=MonteCarlo(NumberOfParticle,SimNum)
+MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias)
 for n in range(NumberOfParticle):
     Syst.AddRandParticle()
 
