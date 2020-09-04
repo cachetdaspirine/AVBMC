@@ -231,43 +231,78 @@ class System:
         except ValueError:
             print("No free site available, cannot add any particle")
             return
-        self.OccupiedSite.add(RandomSite)
-        self.FreeSite.remove(RandomSite)
-        self.State[RandomSite]=1
-        # Adding a particle may lead several cluster to merge.
-        # Thus we delete all the concerned cluster and rebuild
-        # the cluster starting from the RandomSite
-        # Warning ! delete from last to first
-        #-------------------------------------------------
-        # Get the occupied neighbors of the added site
-        Neigh=self.Get_Neighbors(RandomSite,Occupied=True)
-        # Get the corresponding affected clusters (in a set in case there are doublet)
-        Clust=self.GetAffectedCluster(Neigh)
-        # Delete by reversed order.
-        for AffectedCluster in reversed(sorted(Clust)):
-            del self.BinaryClusters[AffectedCluster]
-            del self.ObjectClusters[AffectedCluster]
-        # Remake the cluster that is connected to the RandomSite
-        self.MakeBinaryClusters({RandomSite})
-        # Add the last Binary cluster made (the one just before) as a c++
-        # cluster object
-        self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-1].WindowArray,
-                                    eps=self.Eps,
-                                    Kmain=self.Kmain,
-                                    Kcoupling=self.Kcoupling,
-                                    Kvol=self.Kvol,
-                                    Xg=self.BinaryClusters[-1].Xg,
-                                    Yg=self.BinaryClusters[-1].Yg))
+        self.AddParticle(IJ)
+        return RandomSite
+    def AddParticle(self,IJ):
+                self.OccupiedSite.add(IJ)
+                self.FreeSite.remove(IJ)
+                self.State[IJ]=1
+                # Adding a particle may lead several cluster to merge.
+                # Thus we delete all the concerned cluster and rebuild
+                # the cluster starting from the RandomSite
+                # Warning ! delete from last to first
+                #-------------------------------------------------
+                # Get the occupied neighbors of the added site
+                Neigh=self.Get_Neighbors(IJ,Occupied=True)
+                # Get the corresponding affected clusters (in a set in case there are doublet)
+                Clust=self.GetAffectedCluster(Neigh)
+                # Delete by reversed order.
+                for AffectedCluster in reversed(sorted(Clust)):
+                    del self.BinaryClusters[AffectedCluster]
+                    del self.ObjectClusters[AffectedCluster]
+                # Remake the cluster that is connected to the RandomSite
+                self.MakeBinaryClusters({IJ})
+                # Add the last Binary cluster made (the one just before) as a c++
+                # cluster object
+                self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-1].WindowArray,
+                                            eps=self.Eps,
+                                            Kmain=self.Kmain,
+                                            Kcoupling=self.Kcoupling,
+                                            Kvol=self.Kvol,
+                                            Xg=self.BinaryClusters[-1].Xg,
+                                            Yg=self.BinaryClusters[-1].Yg))
+    def AddParticleOutVicinity(self,NIJ):
+        ClustNIJ = self.FindCluster(NIJ)
+        In = True
+        if self.FreeSite.__len__() == ClustNIJ.RealBoundarySites.__len__():
+            return
+        while In:
+            try:
+                RandomSite=rd.sample(self.FreeSite,1)[0]
+            except ValueError:
+                print("No free site available, cannot add any particle")
+                return
+            if not self.CheckVicinity(RandomSite,NIJ):
+                In = False
+        self.AddParticle(RandomSite)
+        return RandomSite
+    def AddParticleVicinity(self,NIJ):
+        ClustNIJ = self.FindCluster(NIJ)
+        OutBox=True
+        if self.OccupiedSite.__len__() == self.Lx*self.Ly:
+            return
+        while OutBox:
+            RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
+            if RandomSite[0]>=0 and RandomSite[0]<self.Lx and RandomSite[1]>=0 and RandomSite[1]<self.Ly:
+                OutBox=False
+        self.AddParticle(RandomSite)
         return RandomSite
     def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
-        try :
-            RandomParticle=rd.sample(self.OccupiedSite,1)[0]
-        except ValueError:
-            print("No particle in the system to remove")
-            return
+        Same = True
+        while Same:
+            try :
+                RandomParticle=rd.sample(self.OccupiedSite,1)[0]
+            except ValueError:
+                print("No particle in the system to remove")
+                return
+            if NIJ:
+                if NIJ!=RandomParticle:
+                    Same = False
+            else :
+                Same=False
         if NIJ:
-            Vcinity = self.CheckVicinity(RandomParticle,NIJ)
+            Vicinity = self.CheckInside(RandomParticle,NIJ)
         # Delete the only affected cluster, make a loop because GetAffectedClust
         # ers returns a set
         for AffectedCluster in reversed(sorted(self.GetAffectedCluster({RandomParticle}))):
@@ -306,12 +341,22 @@ class System:
             return
         return RandomParticle
     def CheckVicinity(self,IJ,NIJ):
+        # Find the cluster of NIJ and check wether IJ is in the Vicinity
+        # Meaning in the cluster of NIJ
         ClustNIJ = self.FindCluster(NIJ)
         if IJ in ClustNIJ.RealBoundarySites:
-            
-    def FindCLuster(self,IJ):
+            return True
+        return False
+    def CheckInside(self,IJ,NIJ):
+        # Find the cluster of NIJ and check wether IJ is in the Vicinity
+        # Meaning in the cluster of NIJ
+        ClustNIJ = self.FindCluster(NIJ)
+        if IJ in ClustNIJ.RealSpaceSites:
+            return True
+        return False
+    def FindCluster(self,IJ):
         Cluster=None
-        for Clust in BinaryClusters:
+        for Clust in self.BinaryClusters:
             if IJ in Clust.RealSpaceSites:
                 Cluster=Clust
                 break

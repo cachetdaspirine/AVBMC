@@ -91,6 +91,9 @@ class BinaryCluster:
         self.RealBoundarySites[:,0]+=self.Xg-self.MidX
         self.RealBoundarySites[:,1]+=self.Yg-self.MidY
         self.NBoundary=self.BoundarySites.__len__()
+        # convert the array to a list of tuple
+        self.BoundarySites=list(map(tuple,self.BoundarySites))
+        self.RealBoundarySites = list(map(tuple,self.RealBoundarySites))
     def Get_Neighbors(self, ij,Occupied=False,Free=False):
         Res=list()
         if ij[0]+1<self.Size:

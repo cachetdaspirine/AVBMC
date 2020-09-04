@@ -35,8 +35,18 @@ class MonteCarlo:
             if if rd.uniform(0,1)<Pbias:
                 In=True
             NIJ = BinSyst.SelectRandomNeighbor()
-            IJ0 = BinSyst.RemoveRandParticle()
-            BinSyst.CheckVicinity()
+            IJ0,InBefore = BinSyst.RemoveRandParticle(NIJ=NIJ)
+            IJ0 = list(IJ0)
+            if rd.uniform(0,1)<Pbias:
+                # Add a particle in the vicinity of NIJ
+                IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
+                InAfter=True
+            else:
+                # Add a particle out of the vicinity of NIJ
+                IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
+                InAfter=False
+            self.Moved.append(IJ0+IJ1)
+        return InBefore, InAfter
     def Reverse(self):
         return System(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):
