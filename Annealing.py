@@ -82,7 +82,7 @@ for t in range(1,TimeStepTot):
     #------Energy before the move---------------------
     Ei=Syst.Compute_Energy()
     #------Make the move------------------------------
-    MC.McMove(Syst)
+    MC.McMoveInOut(Syst)
     #------Store the Energy after the move------------
     Eaft=Syst.Compute_Energy()
     #------see wether we accept the move or not-------
