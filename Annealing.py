@@ -47,6 +47,7 @@ with open('Res/Sim'+str(SimNum)+'/Parameter.out','w') as myfile:
     myfile.write('BetaFinal '+str(BetaFinal)+'\n')
     myfile.write('DE0G '+str(DEG)+'\n')
     myfile.write('Pbias '+str(Pbias)+'\n')
+    myfile.write('PInOut'+str(PInOut)+'\n')
     myfile.write('Kmain '+str(Kmain)+'\n')
     myfile.write('Kcoupling '+str(Kcoupling)+'\n')
     myfile.write('Eps '+str(Eps)+'\n')
@@ -82,11 +83,16 @@ for t in range(1,TimeStepTot):
     #------Energy before the move---------------------
     Ei=Syst.Compute_Energy()
     #------Make the move------------------------------
-    MC.McMoveInOut(Syst)
+    Prob=1
+    if rd.uniform(0,1)<PInOut:
+        Prob = Prob*MC.McMoveInOut(Syst)
+    else :
+        MC.McClusterMove(Syst)
+    Prob=Prob*np.exp(-(Eaft-Ei)*Beta)
     #------Store the Energy after the move------------
     Eaft=Syst.Compute_Energy()
     #------see wether we accept the move or not-------
-    if rd.uniform(0,1)>np.exp(-(Eaft-Ei)*Beta) :
+    if rd.uniform(0,1)>Prob :
         #--Move refused-------------------------------
         Syst=MC.Reverse()
         Success=False

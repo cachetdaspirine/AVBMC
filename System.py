@@ -363,6 +363,9 @@ class System:
         if Cluster==None:
             raise ValueError
         return Cluster
+    def GetVIn(self,NIJ):
+        Clust = BinaryClusters[self.FindCluster(NIJ)]
+        return Clust.GetVIn()
     def GetAffectedCluster(self,SiteConcerned):
         # Must return a set (to avoid doublet) of cluster indices
         AffectedCluster=set()

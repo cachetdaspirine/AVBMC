@@ -29,3 +29,4 @@ BetaFinal=1.6*10**2
 Seed=None
 DEG=0.0125
 Pbias = 0.5
+PInOut = 0.5

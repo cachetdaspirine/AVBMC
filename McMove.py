@@ -30,6 +30,7 @@ class MonteCarlo:
     def McMoveInOut(self,BinSyst):
         self.Moved.clear()
         self.CopySystem=System(Old_System=BinSyst)
+        self.Prob=1
         for _ in range(self.Nmove):
             In=False
             if if rd.uniform(0,1)<Pbias:
@@ -46,7 +47,11 @@ class MonteCarlo:
                 IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
                 InAfter=False
             self.Moved.append(IJ0+IJ1)
-        return InBefore, InAfter
+            VIn = BinSyst.GetVIn(NIJ)
+            VOut = BinSyst.FreeSite.__len__() - VIn
+            self.Prob = self.Prob * (InBefore * Pbias * Vout + (1-InBefore) * (1-Pbias) * VIn)
+            self.Prob = self.Prob / (InAfter * Pbias * Vout + (1-InAfter) * (1-Pbias) * VIn)
+        return Prob
     def Reverse(self):
         return System(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):

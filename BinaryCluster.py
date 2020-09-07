@@ -80,6 +80,8 @@ class BinaryCluster:
             self.Yg+=float(ij[1])
         self.Xg=int(self.Xg/len(self.RealSpaceSites)+1)
         self.Yg=int(self.Yg/len(self.RealSpaceSites)+1)
+    def GetVIn(self):
+        return len()[u for u in self.RealBoundarySites if u[0]>=0 and u[0]<=self.Lx and u[1]>=0 and u[1]<self.Ly])
     def ComputeBoundarySites(self):
         BoundarySet=set()
         #self.BuildOccupiedSites()
