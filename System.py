@@ -231,7 +231,7 @@ class System:
         except ValueError:
             print("No free site available, cannot add any particle")
             return
-        self.AddParticle(IJ)
+        self.AddParticle(RandomSite)
         return RandomSite
     def AddParticle(self,IJ):
                 self.OccupiedSite.add(IJ)
@@ -276,7 +276,7 @@ class System:
                 In = False
         self.AddParticle(RandomSite)
         return RandomSite
-    def AddParticleVicinity(self,NIJ=None,Clust=None):
+    def AddParticleVicinity(self,NIJ=None,Clust=None,NoFusion=False):
         if NIJ :
             ClustNIJ = self.FindCluster(NIJ)
         else :
@@ -284,12 +284,47 @@ class System:
         OutBox=True
         if self.OccupiedSite.__len__() == self.Lx*self.Ly:
             return
+        count=0
         while OutBox:
             RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
             if RandomSite[0]>=0 and RandomSite[0]<self.Lx and RandomSite[1]>=0 and RandomSite[1]<self.Ly:
                 OutBox=False
+            else:
+                continue
+            if NoFusion:
+                if self.GetAffectedCluster(self.Get_Neighbors(RandomSite,Occupied=True)).__len__() >1:
+                    OutBox=True
+            count+=1
+            if count>=self.Lx*self.Ly*1000:
+                raise KeyError
         self.AddParticle(RandomSite)
         return RandomSite
+    def RemoveParticle(self,IJ):
+        for AffectedCluster in reversed(sorted(self.GetAffectedCluster({IJ}))):
+            #self.ObjectClusters[AffectedCluster].PlotPerSite()
+            del self.BinaryClusters[AffectedCluster]
+            del self.ObjectClusters[AffectedCluster]
+        #self.PlotPerSite()
+        # Actualize Free/Occupied Site and State
+        self.FreeSite.add(IJ)
+        self.OccupiedSite.remove(IJ)
+        self.State[IJ]=0
+        # Remake all the binary clusters and keep track of the number of
+        # Binary cluster created to know how many object cluster we need
+        # to create.
+        SizeBefore=self.BinaryClusters.__len__()
+        self.MakeBinaryClusters(self.Get_Neighbors(IJ,Occupied=True))
+        Nclust=self.BinaryClusters.__len__()-SizeBefore
+        # Make sure that the BinaryCluster[n] correspond to the ObjectClusters[n]
+        for n in range(Nclust):
+            k=Nclust-n
+            self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-k].WindowArray,
+                                        eps=self.Eps,
+                                        Kmain=self.Kmain,
+                                        Kcoupling=self.Kcoupling,
+                                        Kvol=self.Kvol,
+                                        Xg=self.BinaryClusters[-k].Xg,
+                                        Yg=self.BinaryClusters[-k].Yg))
     def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
         Same = True
@@ -308,34 +343,27 @@ class System:
             Vicinity = self.CheckInside(RandomParticle,NIJ)
         # Delete the only affected cluster, make a loop because GetAffectedClust
         # ers returns a set
-        for AffectedCluster in reversed(sorted(self.GetAffectedCluster({RandomParticle}))):
-            #self.ObjectClusters[AffectedCluster].PlotPerSite()
-            del self.BinaryClusters[AffectedCluster]
-            del self.ObjectClusters[AffectedCluster]
-        #self.PlotPerSite()
-        # Actualize Free/Occupied Site and State
-        self.FreeSite.add(RandomParticle)
-        self.OccupiedSite.remove(RandomParticle)
-        self.State[RandomParticle]=0
-        # Remake all the binary clusters and keep track of the number of
-        # Binary cluster created to know how many object cluster we need
-        # to create.
-        SizeBefore=self.BinaryClusters.__len__()
-        self.MakeBinaryClusters(self.Get_Neighbors(RandomParticle,Occupied=True))
-        Nclust=self.BinaryClusters.__len__()-SizeBefore
-        # Make sure that the BinaryCluster[n] correspond to the ObjectClusters[n]
-        for n in range(Nclust):
-            k=Nclust-n
-            self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-k].WindowArray,
-                                        eps=self.Eps,
-                                        Kmain=self.Kmain,
-                                        Kcoupling=self.Kcoupling,
-                                        Kvol=self.Kvol,
-                                        Xg=self.BinaryClusters[-k].Xg,
-                                        Yg=self.BinaryClusters[-k].Yg))
+        self.RemoveParticle(IJ)
         if NIJ:
-            return RandomParticle, Vicinity
-        return RandomParticle
+            return IJ, Vicinity
+        return IJ
+    def RmRandContiguousParticle(self,Clust=None):
+        if not Clust:
+            try :
+                Clust = rd.choice(self.BinaryClusters)
+            except ValueError:
+                print("No Cluster in the system to remove a particle from")
+                return
+        Destroyed=False
+        if Clust.OccupiedSite.__len__()==1:
+            ClusterRes=None
+        else :
+            ClusterRes=Clust
+        ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
+        while Clust.CheckDiscontiguity(RealSpaceij=ij): # check
+            ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
+        self.RemoveParticle(ij)
+        return ij,ClusterRes
     def SelectRandomNeighbor(self):
         try :
             RandomParticle=rd.sample(self.OccupiedSite,1)[0]
@@ -382,8 +410,8 @@ class System:
         fig,ax=plt.subplots(figsize=figuresize)
         for objcluster in self.ObjectClusters:
             objcluster.PlotPerSite(show=False,zoom=zoom,ax=ax)
-        ax.set_xlim([0,self.Lx+3])
-        ax.set_ylim([0,self.Ly+3])
+        ax.set_xlim([0,(self.Lx+3)/zoom])
+        ax.set_ylim([0,(self.Ly+3)/zoom])
         plt.show()
     def PrintPerSite(self,FileName='Noname.txt',Path=''):
         XY=[]

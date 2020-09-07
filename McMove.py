@@ -27,6 +27,20 @@ class MonteCarlo:
             IJ0=list(BinSyst.RemoveRandParticle())
             IJ1=list(BinSyst.AddRandParticle(IJ0,self.radius))
             self.Moved.append(IJ0+IJ1)
+    def McClusterMove(self,BinSyst):
+        self.Moved.clear()
+        self.CopySystem=System(Old_System=BinSyst)
+        for _ in range(self.Nmove):
+            IJ0,Cluster=BinSyst.RmRandContiguousParticle()
+            IJ0=[IJ0]
+            if Cluster:
+                try:
+                    IJ1=list(BinSyst.AddParticleVicinity(Clust=Cluster,NoFusion=True))
+                except KeyError:
+                    continue
+            else :
+                IJ1=list(BinSyst.AddRandParticle(IJ0))
+            self.Moved.append(IJ0+IJ1)
     def McMoveInOut(self,BinSyst):
         self.Moved.clear()
         self.CopySystem=System(Old_System=BinSyst)

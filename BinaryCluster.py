@@ -1,4 +1,5 @@
 import numpy as np
+import random as rd
 import sys
 import copy
 
@@ -64,7 +65,7 @@ class BinaryCluster:
         for ij in self.RealSpaceSites:
             #self.OccupiedSite.add((ij[0]-self.Xg+self.MidX,ij[1]-self.Yg+self.MidY))
             OccupiedList.append(self.RealToWindow(ij))
-        self.OccupiedSite=np.array(OccupiedList,dtype=int)
+        self.OccupiedSite=list(map(tuple,OccupiedList))
         for ij in self.OccupiedSite:
             try:
                 self.WindowArray[ij[0],ij[1]]=1
@@ -112,7 +113,7 @@ class BinaryCluster:
             elif Free:
                 Res.append((ij[0],np.infty))
         else :
-            if ij[1]>=0:
+            if ij[1]-1>=0:
                 Res.append((ij[0],ij[1]-1))
             elif Free :
                 Res.append((ij[0],np.infty))
@@ -127,24 +128,19 @@ class BinaryCluster:
                         del Res[n]
         Res=set(Res)
         return Res
-    def AddRandContiguousParticle(self):
-        
-    def RmRandContiguousParticle(self):
-        Fail=True
-        while Fail: #0 0 0 0 0  we continue as long as we didn't manage to remove a particle
-            i,j=self.RmRandParticle() # remove
-            Fail=self.CheckDiscontiguity(i,j) # check
-            if Fail: # if it didn't work, we reverse the move
-                self.AddParticle(i,j) # re-add the previously removed particle
-        return (i,j)
-    def CheckDiscontiguity(self,ij): #return true is it's discontiguous and false if it's contiguous
-        if len(self.Get_Neighbors(ij,Occupied=True))==1:
+
+    def CheckDiscontiguity(self,RealSpaceij=None,WindowSpaceij=None): #return true is it's discontiguous and false if it's contiguous
+        if RealSpaceij:
+            ij = self.RealToWindow(RealSpaceij)
+        elif WindowSpaceij:
+            ij = self.WindowToReal(WindowSpaceij)
+        if len(self.Get_Neighbors(ij,Occupied=True))<=1 :
             return False
-        for Neigh1 in self.Get_Neighbors(ij,Occupied=True):
-            for Neigh2 in self.Get_Neighbors(ij,Occupied=True):
-                if Neigh1!=Neigh2:
-                    if not self.Linked(ij,Neigh1,Neigh2):
-                        return True
+        Neigh1 = rd.sample(self.Get_Neighbors(ij,Occupied=True),1)[0]
+        for Neigh2 in self.Get_Neighbors(ij,Occupied=True):
+            if Neigh1!=Neigh2:
+                if not self.Linked(ij,Neigh1,Neigh2):
+                    return True
         return False
     def Linked(self,Changed,ij1,ij2):
         Clust={ij1}
