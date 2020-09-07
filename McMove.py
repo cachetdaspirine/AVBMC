@@ -33,7 +33,7 @@ class MonteCarlo:
         self.Prob=1
         for _ in range(self.Nmove):
             In=False
-            if if rd.uniform(0,1)<Pbias:
+            if rd.uniform(0,1)<Pbias:
                 In=True
             NIJ = BinSyst.SelectRandomNeighbor()
             IJ0,InBefore = BinSyst.RemoveRandParticle(NIJ=NIJ)

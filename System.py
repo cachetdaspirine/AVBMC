@@ -276,8 +276,11 @@ class System:
                 In = False
         self.AddParticle(RandomSite)
         return RandomSite
-    def AddParticleVicinity(self,NIJ):
-        ClustNIJ = self.FindCluster(NIJ)
+    def AddParticleVicinity(self,NIJ=None,Clust=None):
+        if NIJ :
+            ClustNIJ = self.FindCluster(NIJ)
+        else :
+            ClustNIJ = Clust
         OutBox=True
         if self.OccupiedSite.__len__() == self.Lx*self.Ly:
             return

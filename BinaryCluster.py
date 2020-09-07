@@ -81,7 +81,7 @@ class BinaryCluster:
         self.Xg=int(self.Xg/len(self.RealSpaceSites)+1)
         self.Yg=int(self.Yg/len(self.RealSpaceSites)+1)
     def GetVIn(self):
-        return len()[u for u in self.RealBoundarySites if u[0]>=0 and u[0]<=self.Lx and u[1]>=0 and u[1]<self.Ly])
+        return len([u for u in self.RealBoundarySites if u[0]>=0 and u[0]<=self.Lx and u[1]>=0 and u[1]<self.Ly])
     def ComputeBoundarySites(self):
         BoundarySet=set()
         #self.BuildOccupiedSites()
@@ -127,6 +127,38 @@ class BinaryCluster:
                         del Res[n]
         Res=set(Res)
         return Res
+    def AddRandContiguousParticle(self):
+        
+    def RmRandContiguousParticle(self):
+        Fail=True
+        while Fail: #0 0 0 0 0  we continue as long as we didn't manage to remove a particle
+            i,j=self.RmRandParticle() # remove
+            Fail=self.CheckDiscontiguity(i,j) # check
+            if Fail: # if it didn't work, we reverse the move
+                self.AddParticle(i,j) # re-add the previously removed particle
+        return (i,j)
+    def CheckDiscontiguity(self,ij): #return true is it's discontiguous and false if it's contiguous
+        if len(self.Get_Neighbors(ij,Occupied=True))==1:
+            return False
+        for Neigh1 in self.Get_Neighbors(ij,Occupied=True):
+            for Neigh2 in self.Get_Neighbors(ij,Occupied=True):
+                if Neigh1!=Neigh2:
+                    if not self.Linked(ij,Neigh1,Neigh2):
+                        return True
+        return False
+    def Linked(self,Changed,ij1,ij2):
+        Clust={ij1}
+        VectClust=[ij1]
+        k=0
+        while k!= len(Clust):
+            for Neigh in self.Get_Neighbors(VectClust[k],Occupied=True):
+                if Neigh==ij2:
+                    return True
+                elif Neigh!=Changed and Neigh not in Clust:
+                    Clust.add(Neigh)
+                    VectClust.append(Neigh)
+            k+=1
+        return False
     def BuildOccupiedSites(self):
         OccupiedList=list()
         for i,line in enumerate(self.WindowArray):
