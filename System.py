@@ -302,6 +302,7 @@ class System:
             count+=1
             if count>=self.Lx*self.Ly*1000:
                 raise KeyError
+                print('blocked aggregate')
         self.AddParticle(RandomSite)
         return RandomSite
     def RemoveParticle(self,IJ):
@@ -348,10 +349,10 @@ class System:
             Vicinity = self.CheckInside(RandomParticle,NIJ)
         # Delete the only affected cluster, make a loop because GetAffectedClust
         # ers returns a set
-        self.RemoveParticle(IJ)
+        self.RemoveParticle(RandomParticle)
         if NIJ:
-            return IJ, Vicinity
-        return IJ
+            return RandomParticle, Vicinity
+        return RandomParticle
     def RmRandContiguousParticle(self,Clust=None):
         if not Clust:
             try :
@@ -398,7 +399,7 @@ class System:
             raise ValueError
         return Cluster
     def GetVIn(self,NIJ):
-        Clust = BinaryClusters[self.FindCluster(NIJ)]
+        Clust = self.FindCluster(NIJ)
         return Clust.GetVIn()
     def GetAffectedCluster(self,SiteConcerned):
         # Must return a set (to avoid doublet) of cluster indices

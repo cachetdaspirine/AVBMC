@@ -22,7 +22,7 @@ NumberOfParticle=150
 # |  __/  | (_| | | |    | (_| | | | | | | | |  __/ | |_  |  __/ | |    \__ \
 # |_|      \__,_| |_|     \__,_| |_| |_| |_|  \___|  \__|  \___| |_|    |___/
 
-TimeStepTot=1000000
+TimeStepTot=10000
 StatTime=TimeStepTot//100
 BetaInitial=0
 BetaFinal=1.6*10**2

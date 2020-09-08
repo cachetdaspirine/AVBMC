@@ -8,6 +8,8 @@ class BinaryCluster:
         # Keep track of where the sites are located in the real system
         # RealSpaceSites is a list of tuple (i,j) which represent the
         # location of each particle
+        self.Lx=int(Lx)
+        self.Ly=int(Ly)
         self.RealSpaceSites=Sites
         #self.ShiftSites(Lx,Ly)
         # this define the size of the box in which we are inserting this cluster
@@ -98,7 +100,7 @@ class BinaryCluster:
         for ij in self.OccupiedSite:
             for neigh in self.Get_Neighbors(ij,Free=True):
                 BoundarySet.add(neigh)
-        self.BoundarySites=np.array(list(BoundarySet))
+        self.BoundarySites=np.array(list(BoundarySet),dtype=int)
         self.RealBoundarySites=copy.copy(self.BoundarySites)
         self.RealBoundarySites[:,0]+=self.Xg-self.MidX
         self.RealBoundarySites[:,1]+=self.Yg-self.MidY
@@ -110,29 +112,30 @@ class BinaryCluster:
         Res=list()
         if ij[0]+1<self.Size:
             Res.append((ij[0]+1,ij[1]))
-        elif Free:
-            Res.append((np.infty,ij[1]))
+        #elif Free:
+        #    Res.append((np.infty,ij[1]))
         if ij[0]-1>=0:
             Res.append((ij[0]-1,ij[1]))
-        elif Free:
-            Res.append((np.infty,ij[1]))
+        #elif Free:
+        #    Res.append((np.infty,ij[1]))
         if(ij[0]+ij[1])%2==0:
             if ij[1]+1<self.Size:
                 Res.append((ij[0],ij[1]+1))
-            elif Free:
-                Res.append((ij[0],np.infty))
+        #    elif Free:
+        #        Res.append((ij[0],np.infty))
         else :
             if ij[1]-1>=0:
                 Res.append((ij[0],ij[1]-1))
-            elif Free :
-                Res.append((ij[0],np.infty))
+        #    elif Free :
+        #        Res.append((ij[0],np.infty))
         if Occupied:
             for n in reversed(range(Res.__len__())):
                 if self.WindowArray[Res[n]]!=1:
                     del Res[n]
         if Free:
             for n in reversed(range(Res.__len__())):
-                if all(res!=np.infty for res in Res[n]):
+                #if all(res!=np.infty for res in Res[n]):
+                if all(res>0 and res < self.Size for res in Res[n]):
                     if self.WindowArray[Res[n]]!=0:
                         del Res[n]
         Res=set(Res)

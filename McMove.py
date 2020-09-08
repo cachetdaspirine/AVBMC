@@ -5,6 +5,7 @@ import os
 
 class MonteCarlo:
     def __init__(self,Np=1,SimNum=0,Pbias=0):
+        self.Pbias=Pbias
         self.Success=0
         self.Refuse=0
         self.DEP,self.DEN=0,0
@@ -34,7 +35,7 @@ class MonteCarlo:
             # This garanti that removing a particle wont split the cluster in two parts
             # So only BinSyst.BinaryClusters[-1] will be affected
             IJ0,Destroyed=BinSyst.RmRandContiguousParticle()
-            IJ0=[IJ0]
+            IJ0=list(IJ0)
             try:
                 if Destroyed:
                     IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
@@ -42,6 +43,7 @@ class MonteCarlo:
                     IJ1=list(BinSyst.AddParticleVicinity(Clust=BinSyst.BinaryClusters[-1],NoFusion=True))
             except KeyError:
                 print('Blocked situation')
+                BinSyst.PlotPerSite()
                 continue
             self.Moved.append(IJ0+IJ1)
     def McMoveInOut(self,BinSyst):
@@ -50,12 +52,12 @@ class MonteCarlo:
         self.Prob=1
         for _ in range(self.Nmove):
             In=False
-            if rd.uniform(0,1)<Pbias:
+            if rd.uniform(0,1)<self.Pbias:
                 In=True
             NIJ = BinSyst.SelectRandomNeighbor()
             IJ0,InBefore = BinSyst.RemoveRandParticle(NIJ=NIJ)
             IJ0 = list(IJ0)
-            if rd.uniform(0,1)<Pbias:
+            if rd.uniform(0,1)<self.Pbias:
                 # Add a particle in the vicinity of NIJ
                 IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
                 InAfter=True
@@ -64,11 +66,16 @@ class MonteCarlo:
                 IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
                 InAfter=False
             self.Moved.append(IJ0+IJ1)
-            VIn = BinSyst.GetVIn(NIJ)
+            try:
+                VIn = BinSyst.GetVIn(NIJ)
+            except:
+                print(NIJ)
+                print(IJ0)
+                print(IJ1)
             VOut = BinSyst.FreeSite.__len__() - VIn
-            self.Prob = self.Prob * (InBefore * Pbias * Vout + (1-InBefore) * (1-Pbias) * VIn)
-            self.Prob = self.Prob / (InAfter * Pbias * Vout + (1-InAfter) * (1-Pbias) * VIn)
-        return Prob
+            self.Prob = self.Prob * (InBefore * self.Pbias * VOut + (1-InBefore) * (1-self.Pbias) * VIn)
+            self.Prob = self.Prob / (InAfter * self.Pbias * VOut + (1-InAfter) * (1-self.Pbias) * VIn)
+        return self.Prob
     def Reverse(self):
         return System(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):

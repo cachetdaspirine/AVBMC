@@ -1,4 +1,3 @@
-
 #!/home/hugo/anaconda3/bin/python3
 #!/usr/bin/python3
 
@@ -89,10 +88,10 @@ for t in range(1,TimeStepTot):
         Prob = Prob*MC.McMoveInOut(Syst)
     else :
         MC.McClusterMove(Syst)
-    Prob=Prob*np.exp(-(Eaft-Ei)*Beta)
     #------Store the Energy after the move------------
     Eaft=Syst.Compute_Energy()
     #------see wether we accept the move or not-------
+    Prob=Prob*np.exp(-(Eaft-Ei)*Beta)
     if rd.uniform(0,1)>Prob :
         #--Move refused-------------------------------
         Syst=MC.Reverse()
