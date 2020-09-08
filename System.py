@@ -286,13 +286,18 @@ class System:
             return
         count=0
         while OutBox:
-            RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
+            if ClustNIJ:
+                RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
+                NaffectedClusterMax = 1
+            else:
+                RandomSite = rd.sample(self.FreeSite,1)[0]
+                NaffectedClusterMax = 0
             if RandomSite[0]>=0 and RandomSite[0]<self.Lx and RandomSite[1]>=0 and RandomSite[1]<self.Ly:
                 OutBox=False
             else:
                 continue
             if NoFusion:
-                if self.GetAffectedCluster(self.Get_Neighbors(RandomSite,Occupied=True)).__len__() >1:
+                if self.GetAffectedCluster(self.Get_Neighbors(RandomSite,Occupied=True)).__len__() >NaffectedClusterMax:
                     OutBox=True
             count+=1
             if count>=self.Lx*self.Ly*1000:
@@ -355,15 +360,13 @@ class System:
                 print("No Cluster in the system to remove a particle from")
                 return
         Destroyed=False
-        if Clust.OccupiedSite.__len__()==1:
-            ClusterRes=None
-        else :
-            ClusterRes=Clust
+        if Clust.OccupiedSite.__len__() == 1:
+            Destroyed=True
         ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
         while Clust.CheckDiscontiguity(RealSpaceij=ij): # check
             ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
         self.RemoveParticle(ij)
-        return ij,ClusterRes
+        return ij,Destroyed
     def SelectRandomNeighbor(self):
         try :
             RandomParticle=rd.sample(self.OccupiedSite,1)[0]

@@ -46,6 +46,15 @@ class BinaryCluster:
             for i in range(self.WindowArray.shape[0]):
                 print(str(self.WindowArray[i,j])+" ",end='')
             print('\n',end='')
+    def PrintBoundary(self):
+        for j in reversed(range(self.WindowArray.shape[1])):
+            for i in range(self.WindowArray.shape[0]):
+                #print(str(self.WindowArray[i,j])+" ",end='')
+                if (i,j) in self.BoundarySites:
+                    print(str(1)+" ",end='')
+                else:
+                    print(str(0)+" ",end='')
+            print('\n',end='')
     def WindowToReal(self,ij):
         return (ij[0]+self.Xg-self.MidX,ij[1]+self.Yg-self.MidY)
     def RealToWindow(self,ij):

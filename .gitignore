@@ -2,3 +2,4 @@ Res/
 __pycache__/
 slurm*
 Test.ipynb
+.ipynb_checkpoints/
