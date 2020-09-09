@@ -43,10 +43,8 @@ class MonteCarlo:
                     try:
                         IJ1=list(BinSyst.AddParticleVicinity(Clust=BinSyst.BinaryClusters[-1],NoFusion=True))
                     except ValueError:
-                        IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))    
+                        IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
             except KeyError:
-                print('Blocked situation')
-                BinSyst.PlotPerSite()
                 continue
             self.Moved.append(IJ0+IJ1)
     def McMoveInOut(self,BinSyst):
