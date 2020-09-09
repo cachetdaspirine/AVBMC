@@ -9,4 +9,4 @@ cp Parameter.py "Res/Sim$SimNum/Parameter.py"
 
 
 
-sbatch CanonicalAnnealing.pbs $SimNum
+sbatch AVBMC_Annealing.pbs $SimNum

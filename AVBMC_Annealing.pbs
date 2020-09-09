@@ -1,11 +1,11 @@
 #!/bin/bash
 #PBS -V
-#PBS -q q-1jour
+#PBS -q q-1sem
 #PBS -M hugo.le-roy@u-psud.fr
 #PBS -m bae
 
 #On se place dans le repertoire de travail
-cd /home/hleroy/Simulation/Canonical
+cd /home/hleroy/Simulation/AVBMC
 #cd $PBS_O_WORKDIR
 
 #on lance le calcul
