@@ -79,13 +79,15 @@ print("|_|  |_|  \__,_| |_| |_| |_|   |_____|  \___/   \___/  | .__/ ")
 print("                                                       |_|    ")
 Beta=0
 for t in range(1,TimeStepTot):
+    #Syst.CheckBoundaryFree()
     Success=True
     #------Energy before the move---------------------
     Ei=Syst.Compute_Energy()
     #------Make the move------------------------------
     Prob=1
     if rd.uniform(0,1)<PInOut:
-        Prob = Prob*MC.McMoveInOut(Syst)
+        #Prob = Prob*MC.McMoveInOut(Syst)
+        MC.McMove(Syst)
     else :
         MC.McClusterMove(Syst)
     #------Store the Energy after the move------------

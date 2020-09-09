@@ -40,7 +40,10 @@ class MonteCarlo:
                 if Destroyed:
                     IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
                 else :
-                    IJ1=list(BinSyst.AddParticleVicinity(Clust=BinSyst.BinaryClusters[-1],NoFusion=True))
+                    try:
+                        IJ1=list(BinSyst.AddParticleVicinity(Clust=BinSyst.BinaryClusters[-1],NoFusion=True))
+                    except ValueError:
+                        IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))    
             except KeyError:
                 print('Blocked situation')
                 BinSyst.PlotPerSite()
@@ -51,27 +54,28 @@ class MonteCarlo:
         self.CopySystem=System(Old_System=BinSyst)
         self.Prob=1
         for _ in range(self.Nmove):
-            In=False
-            if rd.uniform(0,1)<self.Pbias:
-                In=True
             NIJ = BinSyst.SelectRandomNeighbor()
-            IJ0,InBefore = BinSyst.RemoveRandParticle(NIJ=NIJ)
+            IJ0,InBefore= BinSyst.RemoveRandParticle(NIJ=NIJ)
             IJ0 = list(IJ0)
             if rd.uniform(0,1)<self.Pbias:
-                # Add a particle in the vicinity of NIJ
-                IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
-                InAfter=True
-            else:
-                # Add a particle out of the vicinity of NIJ
-                IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
-                InAfter=False
+                #Add a particle in the vicinity of NIJ
+                try:
+                    IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
+                    InAfter=True
+                except ValueError:
+                    IJ1=list(BinSyst.AddRandParticle())
+                    InAfter=False
+                    continue
+            elif 0>1:
+                #Add a particle out of the vicinity of NIJ
+                try:
+                    IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
+                    InAfter=False
+                except ValueError:
+                    IJ1=list(BinSyst.AddRandParticle())
+                    InAfter=True
             self.Moved.append(IJ0+IJ1)
-            try:
-                VIn = BinSyst.GetVIn(NIJ)
-            except:
-                print(NIJ)
-                print(IJ0)
-                print(IJ1)
+            VIn = BinSyst.GetVIn(NIJ)
             VOut = BinSyst.FreeSite.__len__() - VIn
             self.Prob = self.Prob * (InBefore * self.Pbias * VOut + (1-InBefore) * (1-self.Pbias) * VIn)
             self.Prob = self.Prob / (InAfter * self.Pbias * VOut + (1-InAfter) * (1-self.Pbias) * VIn)
