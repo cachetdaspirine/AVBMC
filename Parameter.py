@@ -5,16 +5,16 @@
 # |____/   \__, | |___/  \__|  \___| |_| |_| |_|
 #          |___/
 
-Kmain=0.#1.
-Kcoupling=0.#.868
-Eps=0.#01
-KVOL=0.#14.7
+Kmain=1.
+Kcoupling=0.868
+Eps=0.01
+KVOL=4.7
 #----------------
-J=0.#0004
+J=0.0004
 #----------------
-SizeX=50
-SizeY=50
-NumberOfParticle=200
+SizeX=5
+SizeY=5
+NumberOfParticle=5
 
 #  ____                                              _
 # |  _ \    __ _   _ __    __ _   _ __ ___     ___  | |_    ___   _ __   ___
@@ -22,8 +22,8 @@ NumberOfParticle=200
 # |  __/  | (_| | | |    | (_| | | | | | | | |  __/ | |_  |  __/ | |    \__ \
 # |_|      \__,_| |_|     \__,_| |_| |_| |_|  \___|  \__|  \___| |_|    |___/
 
-TimeStepTot=100
-StatTime=TimeStepTot//10
+TimeStepTot=10000
+StatTime=TimeStepTot//10000
 BetaInitial=0
 BetaFinal=1.6*10**2
 Seed=25

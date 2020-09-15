@@ -80,6 +80,7 @@ print("|_|  |_|  \__,_| |_| |_| |_|   |_____|  \___/   \___/  | .__/ ")
 print("                                                       |_|    ")
 Beta=0
 for t in range(1,TimeStepTot):
+    Syst.CheckClusterToSite()
     #Syst.CheckBoundaryFree()
     Success=True
     #------Energy before the move---------------------

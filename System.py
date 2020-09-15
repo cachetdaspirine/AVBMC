@@ -1,7 +1,7 @@
 import numpy as np
+import copy
 from Cluster import *
 from BinaryCluster import *
-from copy import deepcopy
 from matplotlib.colors import LinearSegmentedColormap
 import random as rd
 
@@ -59,8 +59,10 @@ class System:
         self.Kmain=Kmain
         self.Kvol=Kvol
         self.Kcoupling=Kcoupling
-        self.BinaryClusters=list() # list of object set of 0 and 1 that are neighbors
-        self.ObjectClusters=list() # list of object cluster linked witht he c++ program
+        self.BinaryClusters=dict()#list() # list of object set of 0 and 1 that are neighbors
+        self.ObjectClusters=dict() # list of object cluster linked witht he c++ program
+        self.SiteToCluster=dict()
+        self.KeyList=set(np.arange(200))
         self.OccupiedSite=set()
         self.FreeSite=set()
         # Two ways of initializing the system
@@ -89,14 +91,16 @@ class System:
         self.SurfaceEnergy=Old.SurfaceEnergy
         self.OccupiedSite=copy.copy(Old.OccupiedSite)
         self.FreeSite=copy.copy(Old.FreeSite)
+        self.SiteToCluster=copy.deepcopy(Old.SiteToCluster)
         # need to deep copy all the objects
-        self.BinaryClusters=deepcopy(Old.BinaryClusters)
+        self.BinaryClusters=copy.deepcopy(Old.BinaryClusters)
         # need to deep copy all the object in the list
-        self.ObjectClusters=list() # create a new list
-        for Clust in Old.ObjectClusters: # take every cluster in the old system
+        self.ObjectClusters=dict() # create a new list
+        for key,Clust in Old.ObjectClusters.items(): # take every cluster in the old system
             # Cluster has a built-in copy constructor if the old_cluster
             # argument is given
-            self.ObjectClusters.append(Cluster(old_cluster=Clust))
+            #self.BinaryClusters[key]=copy.copy(Old.BinaryClusters[key])
+            self.ObjectClusters[key] = Cluster(old_cluster=Clust)
         if self.ObjectClusters.__len__()!=Old.ObjectClusters.__len__():
                 print('fail')
                 self.PlotPerSite()
@@ -122,13 +126,13 @@ class System:
     def Compute_Energy(self):
         self.ElasticEnergy=0
         self.SurfaceEnergy=0
-        for Clust in self.ObjectClusters:
+        for Clust in self.ObjectClusters.values():
             self.ElasticEnergy+=Clust.Energy
-        for Clust in self.BinaryClusters:
+        for Clust in self.BinaryClusters.values():
             self.SurfaceEnergy+=Clust.NBoundary*self.J
         return self.ElasticEnergy+self.SurfaceEnergy
     def __del__(self):
-        for cluster in self.ObjectClusters:
+        for cluster in self.ObjectClusters.values():
             del(cluster)
     def SetOccupiedAndFreeSites(self):
         for i in range(self.State.shape[0]):
@@ -144,20 +148,21 @@ class System:
         self.MakeObjectClusters()
     def MakeObjectClusters(self):
         #Make sure we delete the object before remaking all of them
-        for cluster in self.ObjectClusters:
+        for cluster in self.ObjectClusters.values():
             del(cluster)
-        for BinClust in self.BinaryClusters:
-            self.ObjectClusters.append(Cluster(State=BinClust.WindowArray,
+        for key,BinClust in self.BinaryClusters.items():
+            self.ObjectClusters[key]=Cluster(State=BinClust.WindowArray,
                                         eps=self.Eps,
                                         Kmain=self.Kmain,
                                         Kcoupling=self.Kcoupling,
                                         Kvol=self.Kvol,
                                         Xg=BinClust.Xg,
-                                        Yg=BinClust.Yg))
+                                        Yg=BinClust.Yg)
     def MakeBinaryClusters(self,SitesNoCluster):
         # Given an array of 0/1 called self.State this function split all the
         # 1 that respect a neighboring relation (given by the function Neighbors)
         # into a list of array indices.
+        Keys=set()
         while SitesNoCluster.__len__()!=0:# The process ends when every sites is in a cluster
             # Start creating a new cluster
             Cluster=set(rd.sample(SitesNoCluster,1)) # Note this will reset the clusters list
@@ -165,13 +170,21 @@ class System:
             ToAdd=set() # this will be the list of neighbors we get from iterate
             while ToIterate.__len__()!=0: # once all the new neighbors are already in the cluster, we stop
                 for sites in ToIterate: # Access to all the neighbors of the sites of the cluster
-                    ToAdd.update(set([neigh for neigh in self.Get_Neighbors(sites) if neigh in self.OccupiedSite])) # Check that they are occupied
+                    #ToAdd.update(set([neigh for neigh in self.Get_Neighbors(sites) if neigh in self.OccupiedSite])) # Check that they are occupied
+                    ToAdd.update(set([neigh for neigh in self.Get_Neighbors(sites,Occupied=True)])) # Check that they are occupied
                 ToIterate=ToAdd.difference(Cluster) # Remove the one that were already in the cluster
                 Cluster.update(ToAdd) # Add them in the cluster
                 ToAdd=set() # reset the adding list
-            self.BinaryClusters.append(BinaryCluster(Cluster,self.Lx,self.Ly))
+            Key=rd.sample(self.KeyList,1)[0]
+            self.KeyList.remove(Key)
+            for site in Cluster:
+                self.SiteToCluster[site] = Key
+            #self.BinaryClusters.append(BinaryCluster(Cluster,self.Lx,self.Ly))
+            self.BinaryClusters[Key] = BinaryCluster(Cluster,self.Lx,self.Ly)
             # Remove the particles that are in the newly created cluster
             SitesNoCluster=SitesNoCluster.difference(Cluster)
+            Keys.add(Key)
+        return Keys
     def Neighbors(self,i1,j1,i2,j2):
         #return true if ij1 and ij2 are neighbors false otherwise
         if j1==j2: # Same line
@@ -256,19 +269,22 @@ class System:
         Clust=self.GetAffectedCluster(Neigh)
         # Delete by reversed order.
         for AffectedCluster in reversed(sorted(Clust)):
+            self.KeyList.add(AffectedCluster)
             del self.BinaryClusters[AffectedCluster]
             del self.ObjectClusters[AffectedCluster]
         # Remake the cluster that is connected to the RandomSite
-        self.MakeBinaryClusters({IJ})
+        Keys = self.MakeBinaryClusters({IJ})
         # Add the last Binary cluster made (the one just before) as a c++
         # cluster object
-        self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-1].WindowArray,
+        for key in Keys:
+            #Fake loop because there can only be one Key
+            self.ObjectClusters[key] = Cluster(State=self.BinaryClusters[key].WindowArray,
                                             eps=self.Eps,
                                             Kmain=self.Kmain,
                                             Kcoupling=self.Kcoupling,
                                             Kvol=self.Kvol,
-                                            Xg=self.BinaryClusters[-1].Xg,
-                                            Yg=self.BinaryClusters[-1].Yg))
+                                            Xg=self.BinaryClusters[key].Xg,
+                                            Yg=self.BinaryClusters[key].Yg)
     def AddParticleOutVicinity(self,NIJ):
         ClustNIJ = self.FindCluster(NIJ)
         In = True
@@ -332,6 +348,7 @@ class System:
             print(IJ)
         for AffectedCluster in reversed(sorted(self.GetAffectedCluster({IJ}))):
             #self.ObjectClusters[AffectedCluster].PlotPerSite()
+            self.KeyList.add(AffectedCluster)
             del self.BinaryClusters[AffectedCluster]
             del self.ObjectClusters[AffectedCluster]
         #self.PlotPerSite()
@@ -343,18 +360,19 @@ class System:
         # Binary cluster created to know how many object cluster we need
         # to create.
         SizeBefore=self.BinaryClusters.__len__()
-        self.MakeBinaryClusters(self.Get_Neighbors(IJ,Occupied=True))
-        Nclust=self.BinaryClusters.__len__()-SizeBefore
+        Keys = self.MakeBinaryClusters(self.Get_Neighbors(IJ,Occupied=True))
+        #Nclust=self.BinaryClusters.__len__()-SizeBefore
         # Make sure that the BinaryCluster[n] correspond to the ObjectClusters[n]
-        for n in range(Nclust):
-            k=Nclust-n
-            self.ObjectClusters.append(Cluster(State=self.BinaryClusters[-k].WindowArray,
+        #for n in range(Nclust):
+            #k=Nclust-n
+        for key in Keys:
+            self.ObjectClusters[key] = Cluster(State=self.BinaryClusters[key].WindowArray,
                                         eps=self.Eps,
                                         Kmain=self.Kmain,
                                         Kcoupling=self.Kcoupling,
                                         Kvol=self.Kvol,
-                                        Xg=self.BinaryClusters[-k].Xg,
-                                        Yg=self.BinaryClusters[-k].Yg))
+                                        Xg=self.BinaryClusters[key].Xg,
+                                        Yg=self.BinaryClusters[key].Yg)
     def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
         Same = True
@@ -380,7 +398,7 @@ class System:
     def RmRandContiguousParticle(self,Clust=None):
         if not Clust:
             try :
-                Clust = rd.choice(self.BinaryClusters)
+                Clust = rd.choice(list(self.BinaryClusters.values()))
             except ValueError:
                 print("No Cluster in the system to remove a particle from")
                 return
@@ -415,13 +433,11 @@ class System:
         return False
     def FindCluster(self,IJ):
         Cluster=None
-        for Clust in self.BinaryClusters:
-            if IJ in Clust.RealSpaceSites:
-                Cluster=Clust
-                break
-        if Cluster==None:
-            raise ValueError
-        return Cluster
+        #for Clust in self.BinaryClusters:
+        #    if IJ in Clust.RealSpaceSites:
+        #        Cluster=Clust
+        #        break
+        return self.BinaryClusters[self.SiteToCluster[IJ]]
     def GetVIn(self,NIJ):
         Clust = self.FindCluster(NIJ)
         return Clust.GetVIn()
@@ -430,13 +446,20 @@ class System:
         AffectedCluster=set()
         for Neigh in SiteConcerned:
             if self.State[Neigh]==1:
-                for n,Cluster in enumerate(self.BinaryClusters):
-                    if Neigh in Cluster.RealSpaceSites:
-                        AffectedCluster.add(n)
+                try:
+                    AffectedCluster.add(self.SiteToCluster[Neigh])
+                except KeyError:
+                    print(SiteConcerned)
+                    print(self.SiteToCluster)
+                    print(Neigh)
+                    raise
+                #for n,Cluster in enumerate(self.BinaryClusters):
+                #    if Neigh in Cluster.RealSpaceSites:
+                #        AffectedCluster.add(n)
         return AffectedCluster
     def PlotPerSite(self,figuresize=(7,5),zoom=1):
         fig,ax=plt.subplots(figsize=figuresize)
-        for objcluster in self.ObjectClusters:
+        for objcluster in self.ObjectClusters.values():
             objcluster.PlotPerSite(show=False,zoom=zoom,ax=ax)
         ax.set_xlim([0,(self.Lx+3)/zoom])
         ax.set_ylim([0,(self.Ly+3)/zoom])
@@ -448,8 +471,29 @@ class System:
                     if self.State[Boundary]!=0:
                         print('BoundarySite aren t free')
                         raise ValueError
+    def CheckClusterToSite(self):
+        for Clust in self.BinaryClusters.values():
+            for Site in Clust.RealSpaceSites:
+                if not Site in list(self.SiteToCluster.keys()):
+                    print('a site in cluster isn t in sitetocluster')
+                    raise KeyError        
+        for Site,Clust in self.SiteToCluster.items():
+            if self.State[Site]==1:
+                if not Site in self.BinaryClusters[Clust].RealSpaceSites:
+                    print('a site isn t in the cluster')
+                    print(self.SiteToCluster)
+                    print(self.BinaryClusters)
+                    self.PlotPerSite()
+                    raise KeyError
+
+        for key in self.BinaryClusters.keys():
+            for i in range(self.BinaryClusters[key].WindowArray.shape[0]):
+                for j in range(self.BinaryClusters[key].WindowArray.shape[1]):
+                    if self.BinaryClusters[key].WindowArray[i,j] != self.ObjectClusters[key].state[i,j]:
+                        print('the two clusters does not correspong')
+                        raise KeyError
     def PrintPerSite(self,FileName='Noname.txt',Path=''):
         XY=[]
-        for objcluster in self.ObjectClusters:
+        for objcluster in self.ObjectClusters.values():
             XY.extend(objcluster.PlotPerSite(show=False,ToPrint=True,Path=Path))
         np.savetxt(FileName,XY)

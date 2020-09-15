@@ -12,7 +12,7 @@ class MonteCarlo:
         self.DEPA=0 #number of step with DE positiv and accepted
         self.DE=0
         self.radius=np.inf
-        self.Nmove=10
+        self.Nmove=min(Np,10)
         self.Moved=list()
         self.Np=Np
         self.SimNum=SimNum
@@ -41,11 +41,15 @@ class MonteCarlo:
                     IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
                 else :
                     try:
-                        IJ1=list(BinSyst.AddParticleVicinity(Clust=BinSyst.BinaryClusters[-1],NoFusion=True))
+                        IJ1=list(BinSyst.AddParticleVicinity(NIJ=rd.sample(BinSyst.Get_Neighbors(IJ0,Occupied=True),1)[0],NoFusion=True))
                     except ValueError:
+                        print('Add a random particle without fusion')
                         IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
             except KeyError:
-                continue
+                BinSyst.PlotPerSite()
+                raise
+                #continue
+            BinSyst.CheckClusterToSite()
             self.Moved.append(IJ0+IJ1)
     def McMoveInOut(self,BinSyst):
         self.Moved.clear()
@@ -61,6 +65,7 @@ class MonteCarlo:
                     IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
                     InAfter=True
                 except ValueError:
+                    print('Add Random Particle')
                     IJ1=list(BinSyst.AddRandParticle())
                     InAfter=False
                     continue
@@ -70,6 +75,7 @@ class MonteCarlo:
                     IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
                     InAfter=False
                 except ValueError:
+                    print('Add Random particle')
                     IJ1=list(BinSyst.AddRandParticle())
                     InAfter=True
             self.Moved.append(IJ0+IJ1)
@@ -79,7 +85,7 @@ class MonteCarlo:
             self.Prob = self.Prob / (InAfter * self.Pbias * VOut + (1-InAfter) * (1-self.Pbias) * VIn)
         return self.Prob
     def Reverse(self):
-        return System(Old_System=self.CopySystem)
+        return self.CopySystem#(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):
         #self.DE+=abs(DE)
         if DE>0:
