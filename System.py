@@ -421,6 +421,10 @@ class System:
         elif len(Keys)==0:
             return None
         elif len(Keys) > 1 :
+            print(ij)
+            print(Keys)
+            self.PrintBinary()
+            self.PrintPerSite()
             print('contiguous removal leads to two cluster, absurd!')
             raise ValueError
     def SelectRandomNeighbor(self):
