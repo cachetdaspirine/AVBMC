@@ -62,7 +62,7 @@ class System:
         self.BinaryClusters=dict()#list() # list of object set of 0 and 1 that are neighbors
         self.ObjectClusters=dict() # list of object cluster linked witht he c++ program
         self.SiteToCluster=dict()
-        self.KeyList=set(np.arange(200))
+        self.KeyList=set()
         self.OccupiedSite=set()
         self.FreeSite=set()
         # Two ways of initializing the system
@@ -77,6 +77,7 @@ class System:
             self.Ly=Ly
             #State of 0 and 1
             self.State=np.array([np.zeros(self.Ly,dtype=int) for _ in range(self.Lx)])
+            self.KeyList=set(np.arange(200))
             self.Np=0
             self.SetOccupiedAndFreeSites()
             self.Compute_Energy()
@@ -89,6 +90,7 @@ class System:
         self.Np=Old.Np
         self.ElasticEnergy=Old.ElasticEnergy
         self.SurfaceEnergy=Old.SurfaceEnergy
+        self.KeyList=copy.copy(Old.KeyList)
         self.OccupiedSite=copy.copy(Old.OccupiedSite)
         self.FreeSite=copy.copy(Old.FreeSite)
         self.SiteToCluster=copy.deepcopy(Old.SiteToCluster)
@@ -112,6 +114,7 @@ class System:
         self.Lx=State.shape[0]
         self.Ly=State.shape[1]
         self.State=State
+        self.KeyList=set(np.arange(200))
         self.SetOccupiedAndFreeSites()
         self.Np=self.OccupiedSite.__len__()
         self.MakeClusters()
@@ -245,7 +248,6 @@ class System:
             print("No free site available, cannot add any particle")
             return
         self.AddParticle(RandomSite)
-        return RandomSite
     def AddParticle(self,IJ):
         if not isinstance(IJ,tuple):
             print('IJ isn t a tuple')
@@ -285,58 +287,60 @@ class System:
                                             Kvol=self.Kvol,
                                             Xg=self.BinaryClusters[key].Xg,
                                             Yg=self.BinaryClusters[key].Yg)
+        return Keys
     def AddParticleOutVicinity(self,NIJ):
         ClustNIJ = self.FindCluster(NIJ)
         In = True
         if self.FreeSite.__len__() <= ClustNIJ.RealBoundarySites.__len__():
             raise ValueError
         while In:
-            try:
-                RandomSite=rd.sample(self.FreeSite,1)[0]
-            except ValueError:
-                print("No free site available, cannot add any particle")
-                raise
+            RandomSite=rd.sample(self.FreeSite,1)[0]
             if not self.CheckVicinity(RandomSite,NIJ):
                 In = False
         self.AddParticle(RandomSite)
-        return RandomSite
-    def AddParticleVicinity(self,NIJ=None,Clust=None,NoFusion=False):
-        if NIJ :
-            ClustNIJ = self.FindCluster(NIJ)
-        else :
-            ClustNIJ = Clust
+    def AddParticleToCluster(self,Cluster):
+        Fusion = True
+        Count=0
+        while Fusion: # we don't want the adding to create a new cluster
+            Count +=1
+            OutBox = True
+            while OutBox: # Check that the site picked is in the box
+                if Cluster==None:
+                    RandomSite = rd.sample(self.FreeSite,1)[0] # No cluster => just take a random site
+                    Naffected = 0
+                else :
+                    RandomSite = rd.choice(Cluster.RealBoundarySites) # Pick a random site in a cluster
+                    Naffected = 1
+                    if Count > 1000 * Cluster.RealBoundarySites.__len__():
+                        Cluster == None
+                if RandomSite[0]>=0 and RandomSite[0]<self.Lx and RandomSite[1]>=0 and RandomSite[1]<self.Ly:
+                    # The RandomSite is in the box, we can set OutBox to true
+                    OutBox = False
+            if self.GetAffectedCluster(self.Get_Neighbors(RandomSite,Occupied=True)).__len__()<=Naffected:
+                # Once we picked a site in the box, we check that addint wont make fusion
+                Fusion = False
+            if Count > 100000 :
+                self.AddRandParticle()
+                return
+        self.AddParticle(RandomSite)
+    def AddParticleVicinity(self,NIJ):
+        ClustNIJ = self.FindCluster(NIJ)
         OutBox=True
         if self.OccupiedSite.__len__() == self.Lx*self.Ly:
+            #Error if the system is full
             raise ValueError
         count=0
         while OutBox:
-            if ClustNIJ:
-                RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
-                NaffectedClusterMax = 1
-            else:
-                RandomSite = rd.sample(self.FreeSite,1)[0]
-                NaffectedClusterMax = 0
+            RandomSite = rd.choice(ClustNIJ.RealBoundarySites)
             if RandomSite[0]>=0 and RandomSite[0]<self.Lx and RandomSite[1]>=0 and RandomSite[1]<self.Ly:
                 if RandomSite!=NIJ:
                     OutBox=False
-            else:
-                continue
-            if NoFusion:
-                if self.GetAffectedCluster(self.Get_Neighbors(RandomSite,Occupied=True)).__len__() >NaffectedClusterMax:
-                    OutBox=True
             count+=1
             if count>=self.Lx*self.Ly*1000:
+                # if you can't find a particle that is in the boundary of a clusters
+                # and which is in the box
                 raise ValueError
-        try:
-            self.AddParticle(RandomSite)
-        except :
-            print(RandomSite)
-            print(NIJ)
-            ClustNIJ.PrintBinary()
-            print(ClustNIJ.RealBoundarySites)
-            self.PrintBinary()
-            raise
-        return RandomSite
+        self.AddParticle(RandomSite)
     def RemoveParticle(self,IJ):
         if not isinstance(IJ,tuple):
             print('IJ isn t a tuple')
@@ -373,6 +377,7 @@ class System:
                                         Kvol=self.Kvol,
                                         Xg=self.BinaryClusters[key].Xg,
                                         Yg=self.BinaryClusters[key].Yg)
+        return Keys
     def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
         Same = True
@@ -393,23 +398,31 @@ class System:
         # ers returns a set
         self.RemoveParticle(RandomParticle)
         if NIJ:
-            return RandomParticle, Vicinity
-        return RandomParticle
+            return Vicinity
     def RmRandContiguousParticle(self,Clust=None):
+        # if we give a cluster, remove a contiguous particles
+        # from this cluster otherwise choose a random clusters
+        # and delete from it.
         if not Clust:
             try :
                 Clust = rd.choice(list(self.BinaryClusters.values()))
             except ValueError:
                 print("No Cluster in the system to remove a particle from")
                 return
-        Destroyed=False
-        if Clust.OccupiedSite.__len__() == 1:
-            Destroyed=True
+        # select random particle in the cluster
         ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
+        # make sure the removal keeps it contiguous
         while Clust.CheckDiscontiguity(RealSpaceij=ij): # check
             ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
-        self.RemoveParticle(ij)
-        return ij,Destroyed
+        #remove the particle
+        Keys = self.RemoveParticle(ij)
+        if len(Keys)==1:
+            return self.BinaryClusters[list(Keys)[0]]
+        elif len(Keys)==0:
+            return None
+        elif len(Keys) > 1 :
+            print('contiguous removal leads to two cluster, absurd!')
+            raise ValueError
     def SelectRandomNeighbor(self):
         try :
             NIJ=rd.sample(self.OccupiedSite,1)[0]
@@ -476,7 +489,7 @@ class System:
             for Site in Clust.RealSpaceSites:
                 if not Site in list(self.SiteToCluster.keys()):
                     print('a site in cluster isn t in sitetocluster')
-                    raise KeyError        
+                    raise KeyError
         for Site,Clust in self.SiteToCluster.items():
             if self.State[Site]==1:
                 if not Site in self.BinaryClusters[Clust].RealSpaceSites:
@@ -485,6 +498,10 @@ class System:
                     print(self.BinaryClusters)
                     self.PlotPerSite()
                     raise KeyError
+        for key in self.BinaryClusters.keys():
+            if key in self.KeyList:
+                print('keys aren t correctly stored or delete')
+                raise KeyError
 
         for key in self.BinaryClusters.keys():
             for i in range(self.BinaryClusters[key].WindowArray.shape[0]):

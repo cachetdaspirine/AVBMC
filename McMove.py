@@ -13,7 +13,6 @@ class MonteCarlo:
         self.DE=0
         self.radius=np.inf
         self.Nmove=min(Np,10)
-        self.Moved=list()
         self.Np=Np
         self.SimNum=SimNum
         self.CopySystem=System()
@@ -22,70 +21,45 @@ class MonteCarlo:
         with open('Res/Sim'+str(self.SimNum)+'/AdvanceStat.out','w') as myfile:
             myfile.write('time Beta PositiveDERate NegativeDERate AcceptedPositiveDERate averageDE\n')
     def McMove(self,BinSyst):
-        self.Moved.clear()
         self.CopySystem=System(Old_System=BinSyst)
         for _ in range(self.Nmove):
-            IJ0=list(BinSyst.RemoveRandParticle())
-            IJ1=list(BinSyst.AddRandParticle(IJ0,self.radius))
-            self.Moved.append(IJ0+IJ1)
-    def McClusterMove(self,BinSyst):
-        self.Moved.clear()
+            IJ0 = BinSyst.RemoveRandParticle()
+            BinSyst.AddRandParticle(IJ0,self.radius)
+    def McClusterMove(self,BinSyst): # works but slow
         self.CopySystem=System(Old_System=BinSyst)
         for _ in range(self.Nmove):
             # This garanti that removing a particle wont split the cluster in two parts
             # So only BinSyst.BinaryClusters[-1] will be affected
-            IJ0,Destroyed=BinSyst.RmRandContiguousParticle()
-            IJ0=list(IJ0)
-            try:
-                if Destroyed:
-                    IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
-                else :
-                    try:
-                        IJ1=list(BinSyst.AddParticleVicinity(NIJ=rd.sample(BinSyst.Get_Neighbors(IJ0,Occupied=True),1)[0],NoFusion=True))
-                    except ValueError:
-                        print('Add a random particle without fusion')
-                        IJ1=list(BinSyst.AddParticleVicinity(Clust=None,NoFusion=True))
-            except KeyError:
-                BinSyst.PlotPerSite()
-                raise
+            AffectedCluster=BinSyst.RmRandContiguousParticle()
+            BinSyst.AddParticleToCluster(AffectedCluster)
                 #continue
-            BinSyst.CheckClusterToSite()
-            self.Moved.append(IJ0+IJ1)
+            #BinSyst.CheckClusterToSite()
     def McMoveInOut(self,BinSyst):
-        self.Moved.clear()
         self.CopySystem=System(Old_System=BinSyst)
         self.Prob=1
         for _ in range(self.Nmove):
             NIJ = BinSyst.SelectRandomNeighbor()
-            IJ0,InBefore= BinSyst.RemoveRandParticle(NIJ=NIJ)
-            IJ0 = list(IJ0)
+            InBefore= BinSyst.RemoveRandParticle(NIJ=NIJ)
             if rd.uniform(0,1)<self.Pbias:
                 #Add a particle in the vicinity of NIJ
-                try:
-                    IJ1 = list(BinSyst.AddParticleVicinity(NIJ))
-                    InAfter=True
-                except ValueError:
-                    print('Add Random Particle')
-                    IJ1=list(BinSyst.AddRandParticle())
-                    InAfter=False
-                    continue
-            elif 0>1:
+                BinSyst.AddParticleVicinity(NIJ)
+                InAfter=True
+            else:
                 #Add a particle out of the vicinity of NIJ
                 try:
-                    IJ1 = list(BinSyst.AddParticleOutVicinity(NIJ))
+                    BinSyst.AddParticleOutVicinity(NIJ)
                     InAfter=False
                 except ValueError:
                     print('Add Random particle')
-                    IJ1=list(BinSyst.AddRandParticle())
+                    BinSyst.AddRandParticle()
                     InAfter=True
-            self.Moved.append(IJ0+IJ1)
             VIn = BinSyst.GetVIn(NIJ)
             VOut = BinSyst.FreeSite.__len__() - VIn
             self.Prob = self.Prob * (InBefore * self.Pbias * VOut + (1-InBefore) * (1-self.Pbias) * VIn)
             self.Prob = self.Prob / (InAfter * self.Pbias * VOut + (1-InAfter) * (1-self.Pbias) * VIn)
         return self.Prob
     def Reverse(self):
-        return self.CopySystem#(Old_System=self.CopySystem)
+        return self.CopySystem#System(Old_System=self.CopySystem)
     def Count(self,Success,DE=0):
         #self.DE+=abs(DE)
         if DE>0:
@@ -94,10 +68,7 @@ class MonteCarlo:
         else:
             self.DEN+=1.
         if Success:
-            if self.Moved[0][0]!=self.Moved[0][2] or self.Moved[0][1]!=self.Moved[0][3]:
-                self.Success+=1.
-            else :
-                self.Refuse+=1.
+            self.Success+=1.
         else:
             self.Refuse+=1.
         if Success and DE>=0:
