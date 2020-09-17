@@ -79,7 +79,10 @@ class BinaryCluster:
         self.OccupiedSite=list(map(tuple,OccupiedList))
         for ij in self.OccupiedSite:
             try:
-                self.WindowArray[ij[0],ij[1]]=1
+                if ij[0]>=0 and ij[1]>=0:
+                    self.WindowArray[ij[0],ij[1]]=1
+                else :
+                    raise IndexError
             except IndexError:
                 raise
     # Given a list of indices in the real space domaine of occupied SitesIndices
