@@ -156,11 +156,8 @@ class BinaryCluster:
         #            del Res[n]
         Res=set(Res)
         return Res
-    def CheckDiscontiguity(self,RealSpaceij=None,WindowSpaceij=None): #return true is it's discontiguous and false if it's contiguous
-        if RealSpaceij:
-            ij = self.RealToWindow(RealSpaceij)
-        elif WindowSpaceij:
-            ij = self.WindowToReal(WindowSpaceij)
+    def CheckDiscontiguity(self,RealSpaceij=None): #return true is it's discontiguous and false if it's contiguous
+        ij = self.RealToWindow(RealSpaceij)
         if len(self.Get_Neighbors(ij,Occupied=True))<=1 :
             return False
         Neigh1 = rd.sample(self.Get_Neighbors(ij,Occupied=True),1)[0]

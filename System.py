@@ -414,6 +414,7 @@ class System:
         # make sure the removal keeps it contiguous
         while Clust.CheckDiscontiguity(RealSpaceij=ij): # check
             ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
+        np.savetxt('Aight.txt',Clust.WindowArray,fmt='%5.0f')
         #remove the particle
         Keys = self.RemoveParticle(ij)
         if len(Keys)==1:
