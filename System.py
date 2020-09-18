@@ -414,7 +414,6 @@ class System:
         # make sure the removal keeps it contiguous
         while Clust.CheckDiscontiguity(RealSpaceij=ij): # check
             ij=rd.sample(Clust.RealSpaceSites,1)[0] # remove
-        np.savetxt('Aight.txt',Clust.WindowArray,fmt='%5.0f')
         #remove the particle
         Keys = self.RemoveParticle(ij)
         if len(Keys)==1:
@@ -422,10 +421,6 @@ class System:
         elif len(Keys)==0:
             return None
         elif len(Keys) > 1 :
-            print(ij)
-            print(Keys)
-            self.PrintBinary()
-            self.PrintPerSite()
             print('contiguous removal leads to two cluster, absurd!')
             raise ValueError
     def SelectRandomNeighbor(self):
