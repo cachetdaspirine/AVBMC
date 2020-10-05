@@ -4,6 +4,8 @@ import sys
 import copy
 
 class BinaryCluster:
+    TopologieUp=list()
+    TopologieDown=list()
     def __init__(self,Sites,Lx,Ly):
         # Keep track of where the sites are located in the real system
         # RealSpaceSites is a list of tuple (i,j) which represent the
@@ -119,29 +121,32 @@ class BinaryCluster:
         self.BoundarySites = list(BoundarySet)
         self.NBoundary = self.BoundarySites.__len__()
     def Get_Neighbors(self, ij,Occupied=False,Free=False,Real=False):
-        Res=list()
-        if ij[0]+1<self.Size:
-            Res.append((ij[0]+1,ij[1]))
-        #elif Free:
-        #    Res.append((np.infty,ij[1]))
-        if ij[0]-1>=0:
-            Res.append((ij[0]-1,ij[1]))
-        #elif Free:
-        #    Res.append((np.infty,ij[1]))
-        if(ij[0]+ij[1])%2==0:
-            if ij[1]+1<self.Size:
-                Res.append((ij[0],ij[1]+1))
-        #    elif Free:
-        #        Res.append((ij[0],np.infty))
+        # Choose the topologie to use depending on the up/down
+        if (ij[0]+ij[1])%2==0:
+            Res = np.array(System.TopologieDown)+np.array(ij)
         else :
-            if ij[1]-1>=0:
-                Res.append((ij[0],ij[1]-1))
-        #    elif Free :
-        #        Res.append((ij[0],np.infty))
+            Res = np.array(System.TopologieUp)+np.array(ij)
+        # regularize the result array with only the value that can be inside the state
+        Resreg=np.delete(Res,np.argwhere((Res[:,0]>=sellf.Size) | (Res[:,0]<0) | (Res[:,1]>=self.Size) | (Res[:,1]<0)),0)
+        #Build a numpy array of tuple
+        Resbis=np.empty(Resreg.__len__(),dtype=object)
+        Resbis[:] = list(zip(Resreg[:,0],Resreg[:,1]))
+        #check the occupancie or not
         if Occupied:
-            for n in reversed(range(Res.__len__())):
-                if self.WindowArray[Res[n]]!=1:
-                    del Res[n]
+            Resbis=Resbis[np.array([self.WindowArray[r]==1 for r in Resbis ])]
+        if Free:
+            if not Real:
+                Resbis = Resbis[np.array([self.WindowArray[r]==0 for r in Resbis])]
+                for r in Res:
+                    if r[0]<0 or r[0]>=self.Size or r[1]<0 or r[1]>=self.Size:
+                        np.append(Resbis,tuple(r))
+            else:
+                Resbis = Resbis[np.array([self.RealSpaceSites[r]==0 for r in Resbis])]
+                for r in Res:
+                    if r[0]<0 or r[0]>=self.Size or r[1]<0 or r[1]>=self.Size:
+                        np.append(Resbis,tuple(r))
+
+        return set(Resbis)
         if Free :
             for n in reversed(range(Res.__len__())):
                 #if all(res!=np.infty for res in Res[n]):

@@ -3,6 +3,7 @@
 
 
 from System import *
+from BinaryCluster import *
 from McMove import *
 import time
 import os
@@ -16,6 +17,10 @@ time_start = time.perf_counter()
 SimNum=sys.argv[1]
 sys.path.insert(0,'Res/Sim'+str(SimNum))
 from Parameter import *
+System.TopologieUp = TopologieUp
+System.TopologieDown = TopologieDown
+BinaryCluster.TopologieDown = TopologieDown
+BinaryCluster.TopologieUp = TopologieUp
 #os.system('rm -rf Res/Sim'+str(SimNum))
 #os.system('mkdir Res/Sim'+str(SimNum))
 

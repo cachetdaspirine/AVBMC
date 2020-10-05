@@ -35,6 +35,8 @@ cm = LinearSegmentedColormap('my_colormap', cdict, 1024)
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
 class System:
+    TopologieUp=list()
+    TopologieDown=list()
     #There are three ways of initializing the System
     # 1- with another system -> make a Copy
     # 2- with an array of 0 and 1 -> create the cluster associated
@@ -188,50 +190,39 @@ class System:
             SitesNoCluster=SitesNoCluster.difference(Cluster)
             Keys.add(Key)
         return Keys
-    def Neighbors(self,i1,j1,i2,j2):
+    # def Neighbors(self,i1,j1,i2,j2):
         #return true if ij1 and ij2 are neighbors false otherwise
-        if j1==j2: # Same line
-            if i1==i2-1 or i1==i2+1 : # right or left neighbors
-                return True
-        elif i1==i2: # Same column
-            if (i1+j1)%2==0 : # which means ij1 is down : \/
-                if j1==j2-1: # ij1 is just below ij2
-                    return True
-            else : # which means ij1 is up : /\
-                if j1==j2+1: # ij1 is just over ij2
-                    return True
-        return False
+        # if j1==j2: # Same line
+            # if i1==i2-1 or i1==i2+1 : # right or left neighbors
+                # return True
+        # elif i1==i2: # Same column
+            # if (i1+j1)%2==0 : # which means ij1 is down : \/
+                # if j1==j2-1: # ij1 is just below ij2
+                    # return True
+            # else : # which means ij1 is up : /\
+                # if j1==j2+1: # ij1 is just over ij2
+                    # return True
+
     def Get_Neighbors(self, ij,Occupied=False,Free=False):
-        Res=list()
-        if ij[0]+1<self.Lx:
-            Res.append((ij[0]+1,ij[1]))
-        elif Free:
-            Res.append((np.infty,ij[1]))
-        if ij[0]-1>=0:
-            Res.append((ij[0]-1,ij[1]))
-        elif Free:
-            Res.append((np.infty,ij[1]))
-        if(ij[0]+ij[1])%2==0:
-            if ij[1]+1<self.Ly:
-                Res.append((ij[0],ij[1]+1))
-            elif Free:
-                Res.append((ij[0],np.infty))
+        # Choose the topologie to use depending on the up/down
+        if (ij[0]+ij[1])%2==0:
+            Res = np.array(System.TopologieDown)+np.array(ij)
         else :
-            if ij[1]-1>=0:
-                Res.append((ij[0],ij[1]-1))
-            elif Free :
-                Res.append((ij[0],np.infty))
+            Res = np.array(System.TopologieUp)+np.array(ij)
+        # regularize the result array with only the value that can be inside the state
+        Resreg=np.delete(Res,np.argwhere((Res[:,0]>=self.Lx) | (Res[:,0]<0) | (Res[:,1]>=self.Ly) | (Res[:,1]<0)),0)
+        #Build a numpy array of tuple
+        Resbis=np.empty(Resreg.__len__(),dtype=object)
+        Resbis[:] = list(zip(Resreg[:,0],Resreg[:,1]))
+        #check the occupancie or not
         if Occupied:
-            for n in reversed(range(Res.__len__())):
-                if self.State[Res[n]]!=1:
-                    del Res[n]
+            Resbis=Resbis[np.array([self.State[r]==1 for r in Resbis ])]
         if Free:
-            for n in reversed(range(Res.__len__())):
-                if all(res!=np.infty for res in Res[n]):
-                    if self.State[Res[n]]!=0:
-                        del Res[n]
-        Res=set(Res)
-        return Res
+            Resbis = Resbis[np.array([self.State[r]==0 for r in Resbis])]
+            for r in Res:
+                if r[0]<0 or r[0]>=self.Lx or r[1]<0 or r[1]>=self.Ly:
+                    np.append(Resbis,tuple(r))
+        return set(Resbis)
     def AddRandParticle(self,IJ=None,Radius=np.infty):
         if IJ==None:
             IJ=(self.Lx//2,self.Ly//2)
