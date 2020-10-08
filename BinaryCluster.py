@@ -98,7 +98,7 @@ class BinaryCluster:
         self.Xg=int(self.Xg/len(self.RealSpaceSites)+1)
         self.Yg=int(self.Yg/len(self.RealSpaceSites)+1)
     def GetVIn(self):
-        return len([u for u in self.RealBoundarySites if u[0]>=0 and u[0]<=self.Lx and u[1]>=0 and u[1]<self.Ly])
+        return len(self.RealBoundarySites)#len([u for u in self.RealBoundarySites])
     def ComputeBoundarySites(self):
         BoundarySet=set()
         RealBoundarySet=set()
@@ -106,64 +106,46 @@ class BinaryCluster:
         for ij in self.OccupiedSite:
             for neigh in self.Get_Neighbors(ij,Free=True):
                 BoundarySet.add(neigh)
-        for ij in self.RealSpaceSites:
-            for neigh in self.Get_Neighbors(ij,Free=True,Real=True):
-                RealBoundarySet.add(neigh)
-        #self.BoundarySites=np.array(list(BoundarySet),dtype=int)
-        #self.RealBoundarySites=np.array(list(BoundarySet),dtype=int)
-        #self.RealBoundarySites=copy.copy(self.BoundarySites)
-        #self.RealBoundarySites[:,0]+=self.Xg-self.MidX
-        #self.RealBoundarySites[:,1]+=self.Yg-self.MidY
-        # convert the array to a list of tuple
-        #self.BoundarySites=list(map(tuple,self.BoundarySites))
-        #self.RealBoundarySites = list(map(tuple,self.RealBoundarySites))
+        for ij in self.OccupiedSite:
+            for neigh in self.Get_Neighbors(ij,Free=True,Border=True):
+                Rneigh = self.WindowToReal(neigh)
+                if Rneigh[0] <self.Lx and Rneigh[0]>=0 and Rneigh[1] < self.Ly and Rneigh[1] >=0:
+                    RealBoundarySet.add(Rneigh)
         self.RealBoundarySites = list(RealBoundarySet)
         self.BoundarySites = list(BoundarySet)
-        self.NBoundary = self.BoundarySites.__len__()
-    def Get_Neighbors(self, ij,Occupied=False,Free=False,Real=False):
+        self.NBoundary = self.Get_Neighbors(ij,Border=True).__len__()
+    def Get_Neighbors(self, ij,Occupied=False,Free=False,Border=False):
+        # get the real or window index
         # Choose the topologie to use depending on the up/down
         if (ij[0]+ij[1])%2==0:
-            Res = np.array(System.TopologieDown)+np.array(ij)
+            Res = np.array(self.TopologieDown)+np.array(ij)
         else :
-            Res = np.array(System.TopologieUp)+np.array(ij)
+            Res = np.array(self.TopologieUp)+np.array(ij)
         # regularize the result array with only the value that can be inside the state
-        Resreg=np.delete(Res,np.argwhere((Res[:,0]>=sellf.Size) | (Res[:,0]<0) | (Res[:,1]>=self.Size) | (Res[:,1]<0)),0)
+        if not Border:
+            Resreg=np.delete(Res,np.argwhere((Res[:,0]>=self.Size) | (Res[:,0]<0) | (Res[:,1]>=self.Size) | (Res[:,1]<0)),0)
+        else:
+            Resreg=Res
         #Build a numpy array of tuple
         Resbis=np.empty(Resreg.__len__(),dtype=object)
         Resbis[:] = list(zip(Resreg[:,0],Resreg[:,1]))
+        if Border:
+            Resbis = list(Resbis)
         #check the occupancie or not
-        if Occupied:
-            Resbis=Resbis[np.array([self.WindowArray[r]==1 for r in Resbis ])]
-        if Free:
-            if not Real:
+        if Border :
+            for n in reversed(range(Resbis.__len__())):
+                try:
+                    if self.WindowArray[Resbis[n]]!=0:
+                        del Resbis[n]
+                except IndexError:
+                    continue
+        else :
+            if Occupied:
+                Resbis=Resbis[np.array([self.WindowArray[r]==1 for r in Resbis ])]
+            elif Free:
                 Resbis = Resbis[np.array([self.WindowArray[r]==0 for r in Resbis])]
-                for r in Res:
-                    if r[0]<0 or r[0]>=self.Size or r[1]<0 or r[1]>=self.Size:
-                        np.append(Resbis,tuple(r))
-            else:
-                Resbis = Resbis[np.array([self.RealSpaceSites[r]==0 for r in Resbis])]
-                for r in Res:
-                    if r[0]<0 or r[0]>=self.Size or r[1]<0 or r[1]>=self.Size:
-                        np.append(Resbis,tuple(r))
 
         return set(Resbis)
-        if Free :
-            for n in reversed(range(Res.__len__())):
-                #if all(res!=np.infty for res in Res[n]):
-                if not Real:
-                    if all(res>=0 and res < self.Size for res in Res[n]):
-                        if self.WindowArray[Res[n]]!=0:
-                            del Res[n]
-                if Real:
-                    if all(res>=0 for res in Res[n]) and Res[n][0]<self.Lx and Res[n][1]<self.Ly:
-                        if Res[n] in self.RealSpaceSites:
-                            del Res[n]
-        #if not PBC:
-        #    for n in reversed(range(Res.__len__())):
-        #        if any(res!=np.infty for res in Res[n]):
-        #            del Res[n]
-        Res=set(Res)
-        return Res
     def CheckDiscontiguity(self,RealSpaceij=None): #return true is it's discontiguous and false if it's contiguous
         ij = self.RealToWindow(RealSpaceij)
         if len(self.Get_Neighbors(ij,Occupied=True))<=1 :

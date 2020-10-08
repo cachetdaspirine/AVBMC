@@ -203,12 +203,12 @@ class System:
                 # if j1==j2+1: # ij1 is just over ij2
                     # return True
 
-    def Get_Neighbors(self, ij,Occupied=False,Free=False):
+    def Get_Neighbors(self, ij,Occupied=False):#,Free=False):
         # Choose the topologie to use depending on the up/down
         if (ij[0]+ij[1])%2==0:
-            Res = np.array(System.TopologieDown)+np.array(ij)
+            Res = np.array(self.TopologieDown)+np.array(ij)
         else :
-            Res = np.array(System.TopologieUp)+np.array(ij)
+            Res = np.array(self.TopologieUp)+np.array(ij)
         # regularize the result array with only the value that can be inside the state
         Resreg=np.delete(Res,np.argwhere((Res[:,0]>=self.Lx) | (Res[:,0]<0) | (Res[:,1]>=self.Ly) | (Res[:,1]<0)),0)
         #Build a numpy array of tuple
@@ -217,11 +217,11 @@ class System:
         #check the occupancie or not
         if Occupied:
             Resbis=Resbis[np.array([self.State[r]==1 for r in Resbis ])]
-        if Free:
-            Resbis = Resbis[np.array([self.State[r]==0 for r in Resbis])]
-            for r in Res:
-                if r[0]<0 or r[0]>=self.Lx or r[1]<0 or r[1]>=self.Ly:
-                    np.append(Resbis,tuple(r))
+        #if Free:
+        #    Resbis = Resbis[np.array([self.State[r]==0 for r in Resbis])]
+        #    for r in Res:
+        #        if r[0]<0 or r[0]>=self.Lx or r[1]<0 or r[1]>=self.Ly:
+                    #np.append(Resbis,tuple(r))
         return set(Resbis)
     def AddRandParticle(self,IJ=None,Radius=np.infty):
         if IJ==None:
