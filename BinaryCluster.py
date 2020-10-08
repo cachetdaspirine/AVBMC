@@ -102,8 +102,10 @@ class BinaryCluster:
     def ComputeBoundarySites(self):
         BoundarySet=set()
         RealBoundarySet=set()
-        #self.BuildOccupiedSites()
+        self.NBoundary=0
         for ij in self.OccupiedSite:
+            print(self.Get_Neighbors(ij,Free=True,Border=True))
+            self.NBoundary+=self.Get_Neighbors(ij,Free=True,Border=True).__len__()
             for neigh in self.Get_Neighbors(ij,Free=True):
                 BoundarySet.add(neigh)
         for ij in self.OccupiedSite:
@@ -113,7 +115,7 @@ class BinaryCluster:
                     RealBoundarySet.add(Rneigh)
         self.RealBoundarySites = list(RealBoundarySet)
         self.BoundarySites = list(BoundarySet)
-        self.NBoundary = self.Get_Neighbors(ij,Border=True).__len__()
+        #self.NBoundary = self.Get_Neighbors(ij,Border=True).__len__()
     def Get_Neighbors(self, ij,Occupied=False,Free=False,Border=False):
         # get the real or window index
         # Choose the topologie to use depending on the up/down
