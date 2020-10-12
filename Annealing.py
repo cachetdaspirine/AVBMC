@@ -17,10 +17,6 @@ time_start = time.perf_counter()
 SimNum=sys.argv[1]
 sys.path.insert(0,'Res/Sim'+str(SimNum))
 from Parameter import *
-System.TopologieUp = TopologieUp
-System.TopologieDown = TopologieDown
-BinaryCluster.TopologieDown = TopologieDown
-BinaryCluster.TopologieUp = TopologieUp
 #os.system('rm -rf Res/Sim'+str(SimNum))
 #os.system('mkdir Res/Sim'+str(SimNum))
 
@@ -47,6 +43,7 @@ def CoolDown(time,DE0):
 #  \___/   \___/    |_|   |_|      \___/    |_|
 
 with open('Res/Sim'+str(SimNum)+'/Parameter.out','w') as myfile:
+    myfile.write('ParticleType '+ParticleType)
     myfile.write('TimeStepTot '+str(TimeStepTot)+'\n')
     myfile.write('StatTime '+str(StatTime)+'\n')
     myfile.write('BetaInitial '+str(BetaInitial)+'\n')
@@ -72,7 +69,7 @@ with open('Res/Sim'+str(SimNum)+'/Parameter.out','w') as myfile:
 rd.seed(Seed)
 np.random.seed(Seed)
 Beta=BetaInitial
-Syst=System(SizeX,SizeY,J=J,Eps=Eps,Kcoupling=Kcoupling,Kmain=Kmain,Kvol=KVOL)
+Syst=System(SizeX,SizeY,J=J,Eps=Eps,Kcoupling=Kcoupling,Kmain=Kmain,Kvol=KVOL,ParticleType = ParticleType)
 MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias)
 for n in range(NumberOfParticle):
     Syst.AddRandParticle()

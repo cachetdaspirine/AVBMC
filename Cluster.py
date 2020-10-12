@@ -63,22 +63,39 @@ from ctypes import c_char_p
 # lib.OutputsystemSite : it take the name of a file  as  an  argument  and  it
 #output the position of the nodes site by site (a line  is  a  list  of  nodes
 # lib.OutputSystemSpring : same as outputsystemsite but sorted by spring))
-lib = cdll.LoadLibrary('./lib.so')
+libTriangle = cdll.LoadLibrary('./libTriangle.so')
 
-lib.CreateSystem.restype=POINTER(c_void_p)
-lib.CreateSystem.argtypes=[POINTER(c_int) , c_int,c_int, c_double,c_double,c_double,c_double]
-lib.DeleteSystem.argtypes=[POINTER(c_void_p)]
-lib.CopySystem.argtypes=[POINTER(c_void_p)]
-lib.CopySystem.restype=POINTER(c_void_p)
+libTriangle.CreateSystem.restype=POINTER(c_void_p)
+libTriangle.CreateSystem.argtypes=[POINTER(c_int) , c_int,c_int, c_double,c_double,c_double,c_double]
+libTriangle.DeleteSystem.argtypes=[POINTER(c_void_p)]
+libTriangle.CopySystem.argtypes=[POINTER(c_void_p)]
+libTriangle.CopySystem.restype=POINTER(c_void_p)
 
-lib.SetElasticConstant.argtypes=[c_double,c_double,c_double,c_double,POINTER(c_void_p)]
-lib.UpdateSystemEnergy.argtypes=[POINTER(c_void_p),POINTER(c_int),c_int,c_int]
+libTriangle.SetElasticConstant.argtypes=[c_double,c_double,c_double,c_double,POINTER(c_void_p)]
+libTriangle.UpdateSystemEnergy.argtypes=[POINTER(c_void_p),POINTER(c_int),c_int,c_int]
 
-lib.GetSystemEnergy.restype=c_double
-lib.GetSystemEnergy.argtypes=[POINTER(c_void_p)]
+libTriangle.GetSystemEnergy.restype=c_double
+libTriangle.GetSystemEnergy.argtypes=[POINTER(c_void_p)]
 
-lib.OutputSystemSite.argtypes=[POINTER(c_void_p),c_char_p]
-lib.OutputSystemSpring.argtypes=[POINTER(c_void_p),c_char_p]
+libTriangle.OutputSystemSite.argtypes=[POINTER(c_void_p),c_char_p]
+libTriangle.OutputSystemSpring.argtypes=[POINTER(c_void_p),c_char_p]
+
+libHexagon = cdll.LoadLibrary('./libHexagon.so')
+
+libHexagon.CreateSystem.restype=POINTER(c_void_p)
+libHexagon.CreateSystem.argtypes=[POINTER(c_int) , c_int,c_int, c_double,c_double,c_double,c_double]
+libHexagon.DeleteSystem.argtypes=[POINTER(c_void_p)]
+libHexagon.CopySystem.argtypes=[POINTER(c_void_p)]
+libHexagon.CopySystem.restype=POINTER(c_void_p)
+
+libHexagon.SetElasticConstant.argtypes=[c_double,c_double,c_double,c_double,POINTER(c_void_p)]
+libHexagon.UpdateSystemEnergy.argtypes=[POINTER(c_void_p),POINTER(c_int),c_int,c_int]
+
+libHexagon.GetSystemEnergy.restype=c_double
+libHexagon.GetSystemEnergy.argtypes=[POINTER(c_void_p)]
+
+libHexagon.OutputSystemSite.argtypes=[POINTER(c_void_p),c_char_p]
+libHexagon.OutputSystemSpring.argtypes=[POINTER(c_void_p),c_char_p]
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -112,8 +129,10 @@ class Cluster:
                 Kvol=1.,
                 old_cluster=None,
                 Xg=0,
-                Yg=0):
+                Yg=0,
+                ParticleType='Triangle'):
         if old_cluster==None:
+            self.ParticleType = ParticleType
             self.None_Copy(State,eps,Kmain,Kcoupling,Kvol,Xg,Yg)
         else :
             self.Copy(old_cluster)
@@ -124,6 +143,10 @@ class Cluster:
         # the pointer toward the cpp object. Each time we call a c++ function
         # we have to give it the adress of the  pointer,  that  the  function
         # will interpret as a pointer toward the c++ object
+        if self.ParticleType=='Triangle':
+            self.lib=libTriangle
+        elif self.ParticleType=='Hexagon':
+            self.lib=libHexagon
         self.Lx=State.shape[0] # X size of the system !!!!!
         self.Ly=State.shape[1] # Y size of the system !!!!!
         #--------------Convert the array into a pointer array---------------
@@ -146,10 +169,15 @@ class Cluster:
         self.Yg=Yg
         self.ActualizeNp() # keep track of the number of particle (number of 1) in the system
         #---------------------Create the cpp object-------------------------
-        self.Adress=lib.CreateSystem(Arraycpp,self.Lx,self.Ly,eps,Kmain,Kcoupling,Kvol) # create the system, all the argument are require here !!!!
+        self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,eps,Kmain,Kcoupling,Kvol) # create the system, all the argument are require here !!!!
         #--------------------Store the value of the Energy------------------
-        self.Energy=lib.GetSystemEnergy(self.Adress) # store the value of the Energy (get energy only returns a number and doesn't reactualize the equilibrium of the system).
+        self.Energy=self.lib.GetSystemEnergy(self.Adress) # store the value of the Energy (get energy only returns a number and doesn't reactualize the equilibrium of the system).
     def Copy(self,old_cluster):
+        self.ParticleType = old_cluster.ParticleType
+        if self.ParticleType=='Triangle':
+            self.lib=libTriangle
+        elif self.ParticleType=='Hexagon':
+            self.lib=libHexagon
         self.Lx=old_cluster.Lx
         self.Ly=old_cluster.Ly
         self.state=old_cluster.state
@@ -160,10 +188,10 @@ class Cluster:
         self.Xg=old_cluster.Xg
         self.Yg=old_cluster.Yg
         self.ActualizeNp()
-        self.Adress=lib.CopySystem(old_cluster.Adress)
-        self.Energy=lib.GetSystemEnergy(self.Adress)
+        self.Adress=self.lib.CopySystem(old_cluster.Adress)
+        self.Energy=self.lib.GetSystemEnergy(self.Adress)
     def __del__(self):
-        lib.DeleteSystem(self.Adress) # deleting pointers is important in c++
+        self.lib.DeleteSystem(self.Adress) # deleting pointers is important in c++
     def PrintBinary(self):
         # function that print the 0/1 array in the right order. So that there
         # is a direct correspondance between 0/1 maps and the triangle
@@ -191,7 +219,7 @@ class Cluster:
             epsilon1=self.eps
         else :
             epsilon1=epsilon
-        lib.SetElasticConstant(epsilon1,Kmain1,Kcoupling1,KVOL1,self.Adress)
+        self.lib.SetElasticConstant(epsilon1,Kmain1,Kcoupling1,KVOL1,self.Adress)
     def Evolv(self,NewState):
         self.ActualizeNp()
         #------------Convert the new state into a pointer array-------------
@@ -211,25 +239,25 @@ class Cluster:
             # if we changed the size of the system, we remake the whole system
             self.Lx=NewState.shape[0]
             self.Ly=NewState.shape[1]
-            lib.DeleteSystem(self.Adress)
-            self.Adress=lib.CreateSystem(Arraycpp,self.Lx,self.Ly,self.eps,self.Kmain,self.Kcoupling,self.KVOL)
-            self.Energy=lib.GetSystemEnergy(self.Adress)
+            self.lib.DeleteSystem(self.Adress)
+            self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,self.eps,self.Kmain,self.Kcoupling,self.KVOL)
+            self.Energy=self.lib.GetSystemEnergy(self.Adress)
             print('create a new system')
         else :
-            lib.UpdateSystemEnergy(self.Adress,Arraycpp,self.Lx,self.Ly)
-            self.Energy=lib.GetSystemEnergy(self.Adress)
+            self.lib.UpdateSystemEnergy(self.Adress,Arraycpp,self.Lx,self.Ly)
+            self.Energy=self.lib.GetSystemEnergy(self.Adress)
     def PrintPerSite(self,Name='NoName.txt'):
         # output the sytem per site (easier if you wanna plot the sites).
         if self.Np<1:
             print("can t output an empty system")
             return 0.
-        lib.OutputSystemSite(self.Adress,Name.encode('utf-8'))
+        self.lib.OutputSystemSite(self.Adress,Name.encode('utf-8'))
     def PrintPerSpring(self,Name='NoName.txt'):
         # output the system per spring (easier if you wanna plot the springs).
         if self.Np<1:
             print("can t output an empty system")
             return 0.
-        lib.OutputSystemSpring(self.Adress,Name.encode('utf-8'))
+        self.lib.OutputSystemSpring(self.Adress,Name.encode('utf-8'))
     def PlotPerSite(self,figuresize=(7,5),zoom=1.,show=True,ax=None,ToPrint=False,Path=''):
         # this one has a trick, it only 'works' on UNIX system and
         # it requires to be autorized to edit and delete file. The

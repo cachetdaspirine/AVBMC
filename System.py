@@ -34,9 +34,11 @@ cm = LinearSegmentedColormap('my_colormap', cdict, 1024)
 # -Addrandparticle : Random 0->1
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
+TopologieDownHex = [(1,0),(0,1),(-1,1),(-1,0),(0,-1),(1,-1)]
+TopologieUpHex = [(1,0),(0,1),(-1,1),(-1,0),(0,-1),(1,-1)]
+TopologieDownTriangle = [(1,0),(-1,0),(0,1)]
+TopologieUpTriangle = [(1,0),(-1,0),(0,-1)]
 class System:
-    TopologieUp=list()
-    TopologieDown=list()
     #There are three ways of initializing the System
     # 1- with another system -> make a Copy
     # 2- with an array of 0 and 1 -> create the cluster associated
@@ -54,8 +56,10 @@ class System:
                 Kvol=1.,
                 J=1.,
                 Old_System=None,
-                State=None):
+                State=None,
+                ParticleType='Triangle'):
         # Elastic constant
+        self.ParticleType = ParticleType
         self.J=J
         self.Eps=Eps
         self.Kmain=Kmain
@@ -67,6 +71,13 @@ class System:
         self.KeyList=set()
         self.OccupiedSite=set()
         self.FreeSite=set()
+        if type(State)==np.ndarray:
+            if ParticleType == 'Triangle':
+                self.TopologieUp = TopologieUpTriangle
+                self.TopologieDown = TopologieDownTriangle
+            elif ParticleType == 'Hexagon':
+                self.TopologieUp = TopologieUpHex
+                self.TopologieDown = TopologieDownHex
         # Two ways of initializing the system
         if type(State)==np.ndarray:
             self.Build_From_Array(State) # From an array
@@ -75,6 +86,12 @@ class System:
             self.Build_From_System(Old_System) # Copy a system
         # Plus the possibility to start with an empty system
         else:
+            if ParticleType == 'Triangle':
+                self.TopologieUp = TopologieUpTriangle
+                self.TopologieDown = TopologieDownTriangle
+            elif ParticleType == 'Hexagon':
+                self.TopologieUp = TopologieUpHex
+                self.TopologieDown = TopologieDownHex
             self.Lx=Lx
             self.Ly=Ly
             #State of 0 and 1
@@ -85,6 +102,9 @@ class System:
             self.Compute_Energy()
     def Build_From_System(self,Old):
         #From another System : we copy everything
+        self.ParticleType = Old.ParticleType
+        self.TopologieUp = Old.TopologieUp
+        self.TopologieDown = Old.TopologieDown
         self.Lx,self.Ly=Old.Lx,Old.Ly
         self.State=copy.copy(Old.State)
         self.Kmain,self.Kvol,self.Eps,self.Kcoupling=Old.Kmain,Old.Kvol,Old.Eps,Old.Kcoupling
@@ -162,7 +182,8 @@ class System:
                                         Kcoupling=self.Kcoupling,
                                         Kvol=self.Kvol,
                                         Xg=BinClust.Xg,
-                                        Yg=BinClust.Yg)
+                                        Yg=BinClust.Yg,
+                                        ParticleType=self.ParticleType)
     def MakeBinaryClusters(self,SitesNoCluster):
         # Given an array of 0/1 called self.State this function split all the
         # 1 that respect a neighboring relation (given by the function Neighbors)
@@ -185,23 +206,11 @@ class System:
             for site in Cluster:
                 self.SiteToCluster[site] = Key
             #self.BinaryClusters.append(BinaryCluster(Cluster,self.Lx,self.Ly))
-            self.BinaryClusters[Key] = BinaryCluster(Cluster,self.Lx,self.Ly)
+            self.BinaryClusters[Key] = BinaryCluster(Cluster,self.Lx,self.Ly,ParticleType=self.ParticleType)
             # Remove the particles that are in the newly created cluster
             SitesNoCluster=SitesNoCluster.difference(Cluster)
             Keys.add(Key)
         return Keys
-    # def Neighbors(self,i1,j1,i2,j2):
-        #return true if ij1 and ij2 are neighbors false otherwise
-        # if j1==j2: # Same line
-            # if i1==i2-1 or i1==i2+1 : # right or left neighbors
-                # return True
-        # elif i1==i2: # Same column
-            # if (i1+j1)%2==0 : # which means ij1 is down : \/
-                # if j1==j2-1: # ij1 is just below ij2
-                    # return True
-            # else : # which means ij1 is up : /\
-                # if j1==j2+1: # ij1 is just over ij2
-                    # return True
 
     def Get_Neighbors(self, ij,Occupied=False):#,Free=False):
         # Choose the topologie to use depending on the up/down
