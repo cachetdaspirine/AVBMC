@@ -70,7 +70,7 @@ rd.seed(Seed)
 np.random.seed(Seed)
 Beta=BetaInitial
 Syst=System(SizeX,SizeY,J=J,Eps=Eps,Kcoupling=Kcoupling,Kmain=Kmain,Kvol=KVOL,ParticleType = ParticleType)
-MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias)
+MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias,PInOut=PInOut)
 for n in range(NumberOfParticle):
     Syst.AddRandParticle()
 
