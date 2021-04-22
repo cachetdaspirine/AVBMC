@@ -20,9 +20,10 @@ from Parameter import *
 #os.system('rm -rf Res/Sim'+str(SimNum))
 #os.system('mkdir Res/Sim'+str(SimNum))
 
-Output=False
 with open('Res/Sim'+str(SimNum)+'/Energy.out','w') as myfile:
     myfile.write('time ElasticEnergy SurfaceEnergy TotalEnergy \n')
+with open('Res/Sim'+str(SimNum)+'/ClusterStat.out','w') as myfile:
+    myfile.write('time MeanClusterSize \n')
 
 
 
@@ -69,8 +70,15 @@ with open('Res/Sim'+str(SimNum)+'/Parameter.out','w') as myfile:
 rd.seed(Seed)
 np.random.seed(Seed)
 Beta=BetaInitial
-Syst=System(SizeX,SizeY,J=J,Eps=Eps,Kcoupling=Kcoupling,Kmain=Kmain,Kvol=KVOL,ParticleType = ParticleType)
-MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias,PInOut=PInOut)
+Syst=System(SizeX,SizeY,
+            J=J,
+            Eps=Eps,
+            Kcoupling=Kcoupling,
+            Kmain=Kmain,
+            Kvol=KVOL,
+            ParticleType = ParticleType,
+            Expansion = Expansion)
+MC=MonteCarlo(NumberOfParticle,SimNum,Pbias = Pbias)
 for n in range(NumberOfParticle):
     Syst.AddRandParticle()
 
@@ -90,10 +98,11 @@ for t in range(1,TimeStepTot):
     #------Make the move------------------------------
     Prob=1
     if rd.uniform(0,1)<PInOut:
-        #Prob = Prob*MC.McMoveInOut(Syst)
-        MC.McMoveInOut(Syst)
+        Prob = Prob*MC.McMoveInOut(Syst)
+        #MC.McMoveInOut(Syst)
     else :
-        MC.McClusterMove(Syst)
+        #MC.McClusterMove(Syst)
+        MC.McMove(Syst)
     #------Store the Energy after the move------------
     Eaft=Syst.Compute_Energy()
     #------see wether we accept the move or not-------
@@ -112,8 +121,11 @@ for t in range(1,TimeStepTot):
         print("time=",t)
         MC.MakeStat(t,Beta)
         if Syst.g_Np()!=0:
+            Etot = Syst.Compute_Energy()
             with open('Res/Sim'+str(SimNum)+'/Energy.out','a') as myfile:
                 myfile.write(str(t)+" "+str(Syst.ElasticEnergy/Syst.g_Np())+" "+str(Syst.SurfaceEnergy/Syst.g_Np())+" "+str((Syst.ElasticEnergy+Syst.SurfaceEnergy)/Syst.g_Np())+"\n")
+            with open('Res/Sim'+str(SimNum)+'/ClusterStat.out','a') as myfile:
+                myfile.write(str(t)+" "+str(np.mean([C.Np for C in Syst.ObjectClusters.values()]))+"\n")
             if Output:
                 Syst.PrintPerSite('Res/Sim'+str(SimNum)+'/Site_time'+str(t)+'.res',Path='Res/Sim'+str(SimNum)+'/')
             #Syst.PrintPerSpring('Res/Sim'+str(SimNum)+'/Spring_time'+str(t)+'.res')

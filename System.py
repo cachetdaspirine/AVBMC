@@ -57,8 +57,10 @@ class System:
                 J=1.,
                 Old_System=None,
                 State=None,
-                ParticleType='Triangle'):
+                ParticleType='Triangle',
+                Expansion = False):
         # Elastic constant
+        self.Expansion = Expansion
         self.ParticleType = ParticleType
         self.J=J
         self.Eps=Eps
@@ -102,6 +104,7 @@ class System:
             self.Compute_Energy()
     def Build_From_System(self,Old):
         #From another System : we copy everything
+        self.Expansion = Old.Expansion
         self.ParticleType = Old.ParticleType
         self.TopologieUp = Old.TopologieUp
         self.TopologieDown = Old.TopologieDown
@@ -183,7 +186,8 @@ class System:
                                         Kvol=self.Kvol,
                                         Xg=BinClust.Xg,
                                         Yg=BinClust.Yg,
-                                        ParticleType=self.ParticleType)
+                                        ParticleType=self.ParticleType,
+                                        Expansion = self.Expansion)
     def MakeBinaryClusters(self,SitesNoCluster):
         # Given an array of 0/1 called self.State this function split all the
         # 1 that respect a neighboring relation (given by the function Neighbors)
@@ -286,7 +290,9 @@ class System:
                                             Kcoupling=self.Kcoupling,
                                             Kvol=self.Kvol,
                                             Xg=self.BinaryClusters[key].Xg,
-                                            Yg=self.BinaryClusters[key].Yg)
+                                            Yg=self.BinaryClusters[key].Yg,
+                                            ParticleType=self.ParticleType,
+                                            Expansion = self.Expansion)
         return Keys
     def AddParticleOutVicinity(self,NIJ):
         ClustNIJ = self.FindCluster(NIJ)
@@ -376,7 +382,9 @@ class System:
                                         Kcoupling=self.Kcoupling,
                                         Kvol=self.Kvol,
                                         Xg=self.BinaryClusters[key].Xg,
-                                        Yg=self.BinaryClusters[key].Yg)
+                                        Yg=self.BinaryClusters[key].Yg,
+                                        ParticleType = self.ParticleType,
+                                        Expansion = self.Expansion)
         return Keys
     def RemoveRandParticle(self,NIJ=False):
         # Try to remove a particle
@@ -476,6 +484,7 @@ class System:
             objcluster.PlotPerSite(show=False,zoom=zoom,ax=ax)
         ax.set_xlim([0,(self.Lx+3)/zoom])
         ax.set_ylim([0,(self.Ly+3)/zoom])
+        ax.set_aspect(aspect=1.)
         plt.show()
     def CheckBoundaryFree(self):
         for Clust in self.BinaryClusters:

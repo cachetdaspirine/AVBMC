@@ -1,12 +1,9 @@
 #!/bin/bash
 
-SimNum=$1
-
-rm -rf "Res/Sim$SimNum"
-mkdir "Res/Sim$SimNum"
-
-cp Parameter.py "Res/Sim$SimNum/Parameter.py"
-
-
-
-sbatch AVBMC_Annealing.pbs $SimNum
+for SimNum in {0..5}
+do
+	rm -rf "Res/Sim$SimNum"
+	mkdir "Res/Sim$SimNum"
+	sed "3s/.*/SimNum =+$SimNum/" Parameter.py > Res/Sim$SimNum/Parameter.py
+	sbatch CanonicalAnnealing.pbs $SimNum
+done

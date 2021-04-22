@@ -4,7 +4,7 @@ from System import *
 import os
 
 class MonteCarlo:
-    def __init__(self,Np=1,SimNum=0,Pbias=0):
+    def __init__(self,Np=1,SimNum=0,Pbias=0.):
         self.Pbias=Pbias
         self.Success=0
         self.Refuse=0

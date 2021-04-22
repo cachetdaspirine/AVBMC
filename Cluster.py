@@ -7,6 +7,8 @@ from ctypes import c_int
 from ctypes import POINTER
 from ctypes import c_void_p
 from ctypes import c_char_p
+from MC import *
+import copy
 
 #__________                        _____                 _____       _________       _____         _____                          ______                                      _____
 #___  ____/____________  ____________  /_______________ ___  /______ ______  /       __  /____________(_)______ ________ _______ ____  /_____        _____________  ____________  /______ _______ ___
@@ -97,6 +99,32 @@ libHexagon.GetSystemEnergy.argtypes=[POINTER(c_void_p)]
 libHexagon.OutputSystemSite.argtypes=[POINTER(c_void_p),c_char_p]
 libHexagon.OutputSystemSpring.argtypes=[POINTER(c_void_p),c_char_p]
 
+libRand = cdll.LoadLibrary(
+    str(pathlib.Path(__file__).parent.absolute()) + '/libRand.so')
+
+libRand.CreateSystem.restype = POINTER(c_void_p)
+libRand.CreateSystem.argtypes = [POINTER(c_int), POINTER(c_double), POINTER(c_double), c_int, c_int]
+libRand.DeleteSystem.argtypes = [POINTER(c_void_p)]
+libRand.CopySystem.argtypes = [POINTER(c_void_p)]
+libRand.CopySystem.restype = POINTER(c_void_p)
+
+libRand.UpdateSystemEnergy.argtypes = [
+    POINTER(c_void_p), POINTER(c_int), c_int, c_int]
+libRand.GetSystemEnergy.restype = c_double
+libRand.GetSystemEnergy.argtypes = [POINTER(c_void_p)]
+
+libRand.OutputSystemSite.argtypes = [POINTER(c_void_p), c_char_p]
+
+libRand.GetBulkEnergy.argtypes = [POINTER(c_void_p)]
+libRand.GetBulkEnergy.restype = c_double
+
+
+libRand.AffineDeformation.argtypes = [POINTER(c_void_p),c_double,c_double]
+libRand.AffineDeformation.restype = c_double
+
+libRand.Extension.argtypes = [POINTER(c_void_p),c_int]
+libRand.Extension.restype = c_double
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -130,7 +158,9 @@ class Cluster:
                 old_cluster=None,
                 Xg=0,
                 Yg=0,
-                ParticleType='Triangle'):
+                ParticleType='Triangle',
+                Expansion = False):
+        self.Expansion = Expansion
         if old_cluster==None:
             self.ParticleType = ParticleType
             self.None_Copy(State,eps,Kmain,Kcoupling,Kvol,Xg,Yg)
@@ -143,7 +173,9 @@ class Cluster:
         # the pointer toward the cpp object. Each time we call a c++ function
         # we have to give it the adress of the  pointer,  that  the  function
         # will interpret as a pointer toward the c++ object
-        if self.ParticleType=='Triangle':
+        if self.Expansion:
+            self.lib = libRand
+        elif self.ParticleType=='Triangle':
             self.lib=libTriangle
         elif self.ParticleType=='Hexagon':
             self.lib=libHexagon
@@ -169,12 +201,33 @@ class Cluster:
         self.Yg=Yg
         self.ActualizeNp() # keep track of the number of particle (number of 1) in the system
         #---------------------Create the cpp object-------------------------
-        self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,eps,Kmain,Kcoupling,Kvol) # create the system, all the argument are require here !!!!
+        if self.Expansion :
+            self.Mc,self.q0 = get_Mc(k = self.Kmain,
+                           kc = self.Kcoupling,
+                           eps = self.eps,
+                           kA = self.KVOL)
+            MC = copy.copy(self.Mc.flatten())
+            MCcpp = MC.ctypes.data_as(POINTER(c_double))
+            for i in range(MC.shape[0]):
+                MCcpp[i] = MC[i]
+
+            Q0 = copy.copy(self.q0)
+            Q0cpp = Q0.ctypes.data_as(POINTER(c_double))
+            for i in range(Q0.shape[0]):
+                Q0cpp[i] = Q0[i]
+            self.Adress = self.lib.CreateSystem(Arraycpp, MCcpp,Q0cpp,self.Lx,self.Ly)
+        else :
+            self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,eps,Kmain,Kcoupling,Kvol) # create the system, all the argument are require here !!!!
         #--------------------Store the value of the Energy------------------
         self.Energy=self.lib.GetSystemEnergy(self.Adress) # store the value of the Energy (get energy only returns a number and doesn't reactualize the equilibrium of the system).
     def Copy(self,old_cluster):
         self.ParticleType = old_cluster.ParticleType
-        if self.ParticleType=='Triangle':
+        self.Expansion = old_cluster.Expansion
+        if self.Expansion :
+            self.Mc = old_cluster.Mc
+            self.q0 = old_cluster.q0
+            self.lib = libRand
+        elif self.ParticleType=='Triangle':
             self.lib=libTriangle
         elif self.ParticleType=='Hexagon':
             self.lib=libHexagon
@@ -240,7 +293,23 @@ class Cluster:
             self.Lx=NewState.shape[0]
             self.Ly=NewState.shape[1]
             self.lib.DeleteSystem(self.Adress)
-            self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,self.eps,self.Kmain,self.Kcoupling,self.KVOL)
+            if Expansion :
+                self.Mc,self.q0 = get_Mc(k = self.Kmain,
+                               kc = self.Kcoupling,
+                               eps = self.eps,
+                               kA = self.KVOL)
+                MC = copy.copy(self.Mc.flatten())
+                MCcpp = MC.ctypes.data_as(POINTER(c_double))
+                for i in range(MC.shape[0]):
+                    MCcpp[i] = MC[i]
+
+                Q0 = copy.copy(self.q0)
+                Q0cpp = Q0.ctypes.data_as(POINTER(c_double))
+                for i in range(Q0.shape[0]):
+                    Q0cpp[i] = Q0[i]
+                self.Adress = self.lib.CreateSystem(Arraycpp, MCcpp,Q0cpp,self.Lx,self.Ly)
+            else :
+                self.Adress=self.lib.CreateSystem(Arraycpp,self.Lx,self.Ly,self.eps,self.Kmain,self.Kcoupling,self.KVOL)
             self.Energy=self.lib.GetSystemEnergy(self.Adress)
             print('create a new system')
         else :
