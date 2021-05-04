@@ -366,7 +366,10 @@ class Cluster:
             if ax:
                 ax.add_patch(Polygon(XY,closed=True,linewidth=0.8,fill=True,fc=(0.41,0.83,0.94,0.5),ec=(0,0,0,1),ls='-',zorder=0))
             if ToPrint:
-                XYTot.append([xy for point in XY for xy in point])
+                ToAdd = [xy for point in XY for xy in point]
+                if self.Expansion:
+                    ToAdd.append(ligne[-1])
+                XYTot.append(ToAdd)
         if Lim:
             ax.set_xlim([XC/Data.shape[0]-1/zoom*np.sqrt(Data.shape[0]),XC/Data.shape[0]+1/zoom*np.sqrt(Data.shape[0])])
             ax.set_ylim([YC/Data.shape[0]-1/zoom*np.sqrt(Data.shape[0]),YC/Data.shape[0]+1/zoom*np.sqrt(Data.shape[0])])
